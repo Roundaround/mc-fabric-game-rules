@@ -1,0 +1,6 @@
+{
+  "gamerulesmod.main.title": "Edit Game Rules",
+  "gamerulesmod.main.loading": "Loading Game Rules",
+  "gamerulesmod.main.error1": "Failed to load game rules.",
+  "gamerulesmod.main.error2": "Check the logs for details."
+}

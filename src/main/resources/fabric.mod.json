@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "gamerulesmod",
+  "version": "${version}",
+  "name": "Game Rules",
+  "description": "Modify game rules in your existing worlds.\n${library}",
+  "authors": [
+    "Roundaround"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/game-rules",
+    "sources": "https://github.com/Roundaround/mc-fabric-game-rules",
+    "issues": "https://github.com/Roundaround/mc-fabric-game-rules/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/gamerulesmod/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "me.roundaround.gamerulesmod.GameRulesMod"
+    ],
+    "client": [
+      "me.roundaround.gamerulesmod.client.GameRulesClientMod"
+    ],
+    "modmenu": [
+      "me.roundaround.gamerulesmod.compat.modmenu.ModMenuImpl"
+    ]
+  },
+  "mixins": [
+    "gamerulesmod.mixins.json"
+  ],
+  "custom": {
+    "loom:injected_interfaces": {
+      "net/minecraft/class_1928": [
+        "me/roundaround/gamerulesmod/util/GameRulesExtensions"
+      ]
+    }
+  },
+  "depends": {
+    "fabricloader": "*",
+    "minecraft": "1.21.*"
+  }
+}
