@@ -23,13 +23,8 @@ public abstract class GameRulesMixin implements GameRulesExtensions {
   public abstract <T extends GameRules.Rule<T>> T get(GameRules.Key<T> key);
 
   @Override
-  public void gamerulesmod$set(String id, boolean value, MinecraftServer server) {
-    this.get(createBooleanKey(id)).set(value, server);
-  }
-
-  @Override
-  public void gamerulesmod$set(String id, int value, MinecraftServer server) {
-    this.get(createIntKey(id)).set(value, server);
+  public Rule<?> gamerulesmod$get(String id) {
+    return this.get(createBooleanKey(id));
   }
 
   @Override
@@ -39,6 +34,16 @@ public abstract class GameRulesMixin implements GameRulesExtensions {
       case IntRule intRule -> Either.right(intRule.get());
       default -> Either.left(false);
     };
+  }
+
+  @Override
+  public void gamerulesmod$set(String id, boolean value, MinecraftServer server) {
+    this.get(createBooleanKey(id)).set(value, server);
+  }
+
+  @Override
+  public void gamerulesmod$set(String id, int value, MinecraftServer server) {
+    this.get(createIntKey(id)).set(value, server);
   }
 
   @Unique

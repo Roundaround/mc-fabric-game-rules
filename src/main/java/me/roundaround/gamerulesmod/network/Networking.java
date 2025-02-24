@@ -2,6 +2,7 @@ package me.roundaround.gamerulesmod.network;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
+import me.roundaround.gamerulesmod.util.RuleInfo;
 import me.roundaround.roundalib.network.CustomCodecs;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryByteBuf;
@@ -46,12 +47,12 @@ public final class Networking {
     }
   }
 
-  public record FetchC2S(int reqId, List<String> ids) implements CustomPayload {
+  public record FetchC2S(int reqId, boolean mutableOnly) implements CustomPayload {
     public static final CustomPayload.Id<FetchC2S> ID = new CustomPayload.Id<>(FETCH_C2S);
     public static final PacketCodec<RegistryByteBuf, FetchC2S> CODEC = PacketCodec.tuple(PacketCodecs.INTEGER,
         FetchC2S::reqId,
-        CustomCodecs.forList(PacketCodecs.STRING),
-        FetchC2S::ids,
+        PacketCodecs.BOOL,
+        FetchC2S::mutableOnly,
         FetchC2S::new
     );
 
@@ -61,12 +62,12 @@ public final class Networking {
     }
   }
 
-  public record FetchS2C(int reqId, Map<String, Either<Boolean, Integer>> values) implements CustomPayload {
+  public record FetchS2C(int reqId, List<RuleInfo> rules) implements CustomPayload {
     public static final CustomPayload.Id<FetchS2C> ID = new CustomPayload.Id<>(FETCH_S2C);
     public static final PacketCodec<RegistryByteBuf, FetchS2C> CODEC = PacketCodec.tuple(PacketCodecs.INTEGER,
         FetchS2C::reqId,
-        CustomCodecs.forMap(PacketCodecs.STRING, PacketCodecs.either(PacketCodecs.BOOL, PacketCodecs.INTEGER)),
-        FetchS2C::values,
+        CustomCodecs.forList(RuleInfo.PACKET_CODEC),
+        FetchS2C::rules,
         FetchS2C::new
     );
 

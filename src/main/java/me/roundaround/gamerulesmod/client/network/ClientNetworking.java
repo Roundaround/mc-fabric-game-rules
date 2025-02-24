@@ -2,9 +2,10 @@ package me.roundaround.gamerulesmod.client.network;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.network.Networking;
+import me.roundaround.gamerulesmod.util.CancellableFuture;
+import me.roundaround.gamerulesmod.util.RuleInfo;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.world.GameRules;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public final class ClientNetworking {
-  private static final HashMap<Integer, CompletableFuture<GameRules>> PENDING = new HashMap<>();
+  private static final HashMap<Integer, CompletableFuture<List<RuleInfo>>> PENDING = new HashMap<>();
 
   private ClientNetworking() {
   }
@@ -27,12 +28,15 @@ public final class ClientNetworking {
     ClientPlayNetworking.send(new Networking.SetC2S(values));
   }
 
-  public static CompletableFuture<GameRules> sendFetch(List<String> ids) {
+  public static CompletableFuture<List<RuleInfo>> sendFetch(boolean mutableOnly) {
     try {
       int reqId = getUniqueReqId();
-      CompletableFuture<GameRules> future = new CompletableFuture<>();
+      CompletableFuture<List<RuleInfo>> future = new CancellableFuture<>(() -> {
+        PENDING.remove(reqId);
+        return true;
+      });
       PENDING.put(reqId, future);
-      ClientPlayNetworking.send(new Networking.FetchC2S(reqId, ids));
+      ClientPlayNetworking.send(new Networking.FetchC2S(reqId, mutableOnly));
       return future;
     } catch (IllegalStateException e) {
       return CompletableFuture.failedFuture(e);
@@ -50,14 +54,12 @@ public final class ClientNetworking {
 
   private static void handleFetch(Networking.FetchS2C payload, ClientPlayNetworking.Context context) {
     context.client().execute(() -> {
-      CompletableFuture<GameRules> future = PENDING.remove(payload.reqId());
-      if (future == null) {
+      CompletableFuture<List<RuleInfo>> future = PENDING.remove(payload.reqId());
+      if (future == null || future.isCancelled()) {
         return;
       }
 
-      GameRules gameRules = new GameRules();
-      payload.values().forEach(gameRules::gamerulesmod$set);
-      future.complete(gameRules);
+      future.complete(payload.rules());
     });
   }
 }
