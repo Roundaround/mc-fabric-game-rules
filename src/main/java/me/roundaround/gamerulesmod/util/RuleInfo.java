@@ -41,10 +41,6 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       GameRules.SHOW_DEATH_MESSAGES
   );
 
-  public static RuleInfo of(GameRules gameRules, GameRules.Key<?> key) {
-    return of(gameRules, key, null);
-  }
-
   public static RuleInfo of(GameRules gameRules, GameRules.Key<?> key, ServerPlayerEntity player) {
     String id = key.getName();
     Either<Boolean, Integer> value = gameRules.gamerulesmod$getValue(id);
@@ -58,10 +54,6 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
 
   public void applyValue(GameRules gameRules) {
     gameRules.gamerulesmod$set(this.id(), this.value());
-  }
-
-  public GameRules.Rule<?> getRule(GameRules gameRules) {
-    return gameRules.gamerulesmod$get(this.id());
   }
 
   public static boolean isMutable(GameRules.Key<?> key, ServerPlayerEntity player) {
