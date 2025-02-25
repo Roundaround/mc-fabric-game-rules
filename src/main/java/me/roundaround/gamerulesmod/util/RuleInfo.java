@@ -29,6 +29,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       GameRules.DISABLE_ELYTRA_MOVEMENT_CHECK,
       GameRules.DO_FIRE_TICK,
       GameRules.DO_IMMEDIATE_RESPAWN,
+      GameRules.DO_LIMITED_CRAFTING,
       GameRules.DO_MOB_GRIEFING,
       GameRules.DO_VINES_SPREAD,
       GameRules.GLOBAL_SOUND_EVENTS,
