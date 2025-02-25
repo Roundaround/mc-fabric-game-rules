@@ -29,10 +29,6 @@ public final class ServerNetworking {
     final ServerPlayerEntity player = context.player();
     final MinecraftServer server = player.server;
     server.execute(() -> {
-      if (!server.isSingleplayer() && !player.hasPermissionLevel(2)) {
-        return;
-      }
-
       ServerWorld world = player.getServerWorld();
       if (world == null) {
         return;
@@ -46,10 +42,6 @@ public final class ServerNetworking {
     final ServerPlayerEntity player = context.player();
     final MinecraftServer server = player.server;
     server.execute(() -> {
-      if (!server.isSingleplayer() && !player.hasPermissionLevel(2)) {
-        return;
-      }
-
       ServerWorld world = player.getServerWorld();
       if (world == null) {
         return;

@@ -4,7 +4,6 @@ import com.mojang.datafixers.util.Either;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.GameRules;
 
@@ -63,13 +62,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
     if (NON_CHEAT_RULES.contains(key)) {
       return true;
     }
-
-    MinecraftServer server = player.server;
-    if (server.isSingleplayer()) {
-      return server.getSaveProperties().areCommandsAllowed();
-    }
-
-    return player.hasPermissionLevel(2);
+    return player.hasPermissionLevel(player.server.getOpPermissionLevel());
   }
 
   public static List<RuleInfo> collect(

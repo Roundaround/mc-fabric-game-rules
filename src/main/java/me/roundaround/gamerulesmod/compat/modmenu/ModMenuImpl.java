@@ -10,17 +10,10 @@ public class ModMenuImpl implements ModMenuApi {
   public ConfigScreenFactory<?> getModConfigScreenFactory() {
     return (screen) -> {
       MinecraftClient client = MinecraftClient.getInstance();
-      if (client == null || client.world == null || !isOp(client)) {
+      if (client == null || client.world == null || client.player == null) {
         return null;
       }
       return new GameRuleScreen(screen);
     };
-  }
-
-  private static boolean isOp(MinecraftClient client) {
-    if (client.player == null) {
-      return false;
-    }
-    return client.isInSingleplayer() || client.player.hasPermissionLevel(2);
   }
 }
