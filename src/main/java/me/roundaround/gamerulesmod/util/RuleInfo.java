@@ -13,7 +13,8 @@ import java.util.List;
 import java.util.Set;
 
 public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutable) {
-  public static final PacketCodec<ByteBuf, RuleInfo> PACKET_CODEC = PacketCodec.tuple(PacketCodecs.STRING,
+  public static final PacketCodec<ByteBuf, RuleInfo> PACKET_CODEC = PacketCodec.tuple(
+      PacketCodecs.STRING,
       RuleInfo::id,
       PacketCodecs.either(PacketCodecs.BOOL, PacketCodecs.INTEGER),
       RuleInfo::value,
@@ -21,9 +22,23 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       RuleInfo::mutable,
       RuleInfo::new
   );
-  public static final Set<GameRules.Key<?>> NON_CHEAT_RULES = Set.of(GameRules.DO_VINES_SPREAD,
+  public static final Set<GameRules.Key<?>> NON_CHEAT_RULES = Set.of(
+      GameRules.ANNOUNCE_ADVANCEMENTS,
+      GameRules.COMMAND_BLOCK_OUTPUT,
+      GameRules.COMMAND_MODIFICATION_BLOCK_LIMIT,
+      GameRules.DISABLE_ELYTRA_MOVEMENT_CHECK,
       GameRules.DO_FIRE_TICK,
-      GameRules.DO_MOB_GRIEFING
+      GameRules.DO_MOB_GRIEFING,
+      GameRules.DO_VINES_SPREAD,
+      GameRules.GLOBAL_SOUND_EVENTS,
+      GameRules.LOG_ADMIN_COMMANDS,
+      GameRules.MAX_COMMAND_CHAIN_LENGTH,
+      GameRules.MAX_COMMAND_FORK_COUNT,
+      GameRules.PLAYERS_NETHER_PORTAL_CREATIVE_DELAY,
+      GameRules.PLAYERS_SLEEPING_PERCENTAGE,
+      GameRules.REDUCED_DEBUG_INFO,
+      GameRules.SEND_COMMAND_FEEDBACK,
+      GameRules.SHOW_DEATH_MESSAGES
   );
 
   public static RuleInfo of(GameRules gameRules, GameRules.Key<?> key) {
