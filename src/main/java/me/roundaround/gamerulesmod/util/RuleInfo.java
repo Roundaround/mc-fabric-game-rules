@@ -63,14 +63,14 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
   }
 
   public static List<RuleInfo> collect(
-      final GameRules gameRules, final ServerPlayerEntity player, final boolean mutableOnly
+      final GameRules gameRules, final ServerPlayerEntity player, final boolean includeImmutable
   ) {
     final ArrayList<RuleInfo> ruleInfos = new ArrayList<>();
     GameRules.accept(new GameRules.Visitor() {
       @Override
       public <T extends GameRules.Rule<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type) {
         RuleInfo ruleInfo = RuleInfo.of(gameRules, key, player);
-        if (!mutableOnly || ruleInfo.mutable()) {
+        if (includeImmutable || ruleInfo.mutable()) {
           ruleInfos.add(RuleInfo.of(gameRules, key, player));
         }
       }

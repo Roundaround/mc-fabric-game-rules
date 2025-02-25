@@ -39,21 +39,21 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     super(client, layout);
   }
 
-  public void fetch(boolean mutableOnly) {
+  public void fetch(boolean showImmutable) {
     this.cancel();
 
     this.clearEntries();
     this.addEntry(LoadingEntry.factory(this.client.textRenderer));
     this.refreshPositions();
 
-    CompletableFuture<List<RuleInfo>> future = ClientNetworking.sendFetch(mutableOnly);
+    CompletableFuture<List<RuleInfo>> future = ClientNetworking.sendFetch(showImmutable);
     this.cancelHandle = CancelHandle.of(future);
 
     future.orTimeout(30, TimeUnit.SECONDS).whenCompleteAsync((rules, throwable) -> {
       if (throwable != null) {
         this.setError();
       } else {
-        this.setRules(rules, mutableOnly);
+        this.setRules(rules, showImmutable);
       }
     }, this.client);
   }
@@ -71,7 +71,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.refreshPositions();
   }
 
-  private void setRules(final List<RuleInfo> rules, final boolean mutableOnly) {
+  private void setRules(final List<RuleInfo> rules, final boolean showImmutable) {
     this.clearEntries();
 
     final TextRenderer textRenderer = this.client.textRenderer;
@@ -90,7 +90,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       @Override
       public void visitBoolean(GameRules.Key<GameRules.BooleanRule> key, GameRules.Type<GameRules.BooleanRule> type) {
         boolean mutable = mutability.getOrDefault(key.getName(), false);
-        if (!mutableOnly || mutable) {
+        if (showImmutable || mutable) {
           this.addEntry(key, BooleanRuleEntry.factory(gameRules, key, mutable, textRenderer));
         }
       }
@@ -98,7 +98,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       @Override
       public void visitInt(GameRules.Key<GameRules.IntRule> key, GameRules.Type<GameRules.IntRule> type) {
         boolean mutable = mutability.getOrDefault(key.getName(), false);
-        if (!mutableOnly || mutable) {
+        if (showImmutable || mutable) {
           this.addEntry(key, IntRuleEntry.factory(gameRules, key, mutable, textRenderer));
         }
       }

@@ -47,12 +47,12 @@ public final class Networking {
     }
   }
 
-  public record FetchC2S(int reqId, boolean mutableOnly) implements CustomPayload {
+  public record FetchC2S(int reqId, boolean includeImmutable) implements CustomPayload {
     public static final CustomPayload.Id<FetchC2S> ID = new CustomPayload.Id<>(FETCH_C2S);
     public static final PacketCodec<RegistryByteBuf, FetchC2S> CODEC = PacketCodec.tuple(PacketCodecs.INTEGER,
         FetchC2S::reqId,
         PacketCodecs.BOOL,
-        FetchC2S::mutableOnly,
+        FetchC2S::includeImmutable,
         FetchC2S::new
     );
 

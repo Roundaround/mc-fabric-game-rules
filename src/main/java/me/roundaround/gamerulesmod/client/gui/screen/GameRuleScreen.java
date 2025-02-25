@@ -31,8 +31,8 @@ public class GameRuleScreen extends Screen {
     this.layout.setHeaderHeight(this.layout.getHeaderHeight() + 2 * GuiUtil.PADDING);
     this.layout.addHeader(this.textRenderer, this.title);
     this.layout.addHeader(CheckboxWidget.builder(Text.translatable("gamerulesmod.main.mutable"), this.textRenderer)
-        .callback((checkbox, checked) -> this.list.fetch(checked))
-        .checked(true)
+        .callback((checkbox, checked) -> this.list.fetch(!checked))
+        .checked(false)
         .build());
 
     this.list = this.layout.addBody(new GameRuleListWidget(this.client, this.layout));

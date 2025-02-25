@@ -38,7 +38,7 @@ public final class ServerNetworking {
         return;
       }
 
-      sendFetch(player, payload.reqId(), RuleInfo.collect(world.getGameRules(), player, payload.mutableOnly()));
+      sendFetch(player, payload.reqId(), RuleInfo.collect(world.getGameRules(), player, payload.includeImmutable()));
     });
   }
 
@@ -56,7 +56,7 @@ public final class ServerNetworking {
       }
 
       final GameRules gameRules = world.getGameRules();
-      final Set<String> mutableRules = RuleInfo.collect(gameRules, player, true)
+      final Set<String> mutableRules = RuleInfo.collect(gameRules, player, false)
           .stream()
           .map(RuleInfo::id)
           .collect(Collectors.toSet());
