@@ -39,7 +39,8 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       GameRules.PLAYERS_SLEEPING_PERCENTAGE,
       GameRules.REDUCED_DEBUG_INFO,
       GameRules.SEND_COMMAND_FEEDBACK,
-      GameRules.SHOW_DEATH_MESSAGES
+      GameRules.SHOW_DEATH_MESSAGES,
+      GameRules.SPAWN_CHUNK_RADIUS
   );
 
   public static RuleInfo of(GameRules gameRules, GameRules.Key<?> key, ServerPlayerEntity player) {
