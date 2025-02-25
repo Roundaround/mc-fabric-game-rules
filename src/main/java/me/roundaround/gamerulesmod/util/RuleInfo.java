@@ -86,7 +86,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       public <T extends GameRules.Rule<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type) {
         RuleInfo ruleInfo = RuleInfo.of(gameRules, key, player);
         if (includeImmutable || ruleInfo.mutable()) {
-          ruleInfos.add(RuleInfo.of(gameRules, key, player));
+          ruleInfos.add(ruleInfo);
         }
       }
     });
