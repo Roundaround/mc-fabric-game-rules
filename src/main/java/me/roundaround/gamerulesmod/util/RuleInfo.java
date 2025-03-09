@@ -2,6 +2,8 @@ package me.roundaround.gamerulesmod.util;
 
 import com.mojang.datafixers.util.Either;
 import io.netty.buffer.ByteBuf;
+import me.roundaround.gamerulesmod.generated.Constants;
+import me.roundaround.gamerulesmod.generated.Variant;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -21,7 +23,8 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       RuleInfo::mutable,
       RuleInfo::new
   );
-  public static final Set<GameRules.Key<?>> NON_CHEAT_RULES = Set.of(
+
+  private static final Set<GameRules.Key<?>> TECHNICAL_NON_CHEAT = Set.of(
       GameRules.ANNOUNCE_ADVANCEMENTS,
       GameRules.COMMAND_BLOCK_OUTPUT,
       GameRules.COMMAND_MODIFICATION_BLOCK_LIMIT,
@@ -42,6 +45,12 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       GameRules.SHOW_DEATH_MESSAGES,
       GameRules.SPAWN_CHUNK_RADIUS
   );
+  private static final Set<GameRules.Key<?>> HARDCORE_NON_CHEAT = Set.of(
+      GameRules.DO_FIRE_TICK,
+      GameRules.DO_MOB_GRIEFING,
+      GameRules.DO_VINES_SPREAD,
+      GameRules.SPAWN_CHUNK_RADIUS
+  );
 
   public static RuleInfo of(GameRules gameRules, GameRules.Key<?> key, ServerPlayerEntity player) {
     String id = key.getName();
@@ -59,14 +68,16 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
   }
 
   public static boolean isMutable(GameRules.Key<?> key, ServerPlayerEntity player) {
-    if (NON_CHEAT_RULES.contains(key)) {
+    if (getNonCheatRules().contains(key)) {
       return true;
     }
     return player.hasPermissionLevel(player.server.getOpPermissionLevel());
   }
 
   public static List<RuleInfo> collect(
-      final GameRules gameRules, final ServerPlayerEntity player, final boolean includeImmutable
+      final GameRules gameRules,
+      final ServerPlayerEntity player,
+      final boolean includeImmutable
   ) {
     final ArrayList<RuleInfo> ruleInfos = new ArrayList<>();
     GameRules.accept(new GameRules.Visitor() {
@@ -79,5 +90,13 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
       }
     });
     return ruleInfos;
+  }
+
+  private static Set<GameRules.Key<?>> getNonCheatRules() {
+    return switch (Constants.ACTIVE_VARIANT) {
+      case Variant.HARDCORE -> HARDCORE_NON_CHEAT;
+      case Variant.TECHNICAL -> TECHNICAL_NON_CHEAT;
+      default -> Set.of();
+    };
   }
 }

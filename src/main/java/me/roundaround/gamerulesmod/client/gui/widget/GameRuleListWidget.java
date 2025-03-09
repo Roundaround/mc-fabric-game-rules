@@ -2,17 +2,17 @@ package me.roundaround.gamerulesmod.client.gui.widget;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
+import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
+import me.roundaround.gamerulesmod.roundalib.client.gui.layout.NonPositioningLayoutWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.layout.linear.LinearLayoutWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.layout.screen.ThreeSectionLayoutWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.widget.FlowListWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.widget.IconButtonWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.widget.ParentElementEntryListWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.widget.TooltipWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.widget.drawable.LabelWidget;
 import me.roundaround.gamerulesmod.util.CancelHandle;
 import me.roundaround.gamerulesmod.util.RuleInfo;
-import me.roundaround.roundalib.client.gui.GuiUtil;
-import me.roundaround.roundalib.client.gui.layout.NonPositioningLayoutWidget;
-import me.roundaround.roundalib.client.gui.layout.linear.LinearLayoutWidget;
-import me.roundaround.roundalib.client.gui.layout.screen.ThreeSectionLayoutWidget;
-import me.roundaround.roundalib.client.gui.widget.FlowListWidget;
-import me.roundaround.roundalib.client.gui.widget.IconButtonWidget;
-import me.roundaround.roundalib.client.gui.widget.ParentElementEntryListWidget;
-import me.roundaround.roundalib.client.gui.widget.TooltipWidget;
-import me.roundaround.roundalib.client.gui.widget.drawable.LabelWidget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -49,13 +49,15 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     CompletableFuture<List<RuleInfo>> future = ClientNetworking.sendFetch(showImmutable);
     this.cancelHandle = CancelHandle.of(future);
 
-    future.orTimeout(30, TimeUnit.SECONDS).whenCompleteAsync((rules, throwable) -> {
-      if (throwable != null) {
-        this.setError();
-      } else {
-        this.setRules(rules, showImmutable);
-      }
-    }, this.client);
+    future.orTimeout(30, TimeUnit.SECONDS).whenCompleteAsync(
+        (rules, throwable) -> {
+          if (throwable != null) {
+            this.setError();
+          } else {
+            this.setRules(rules, showImmutable);
+          }
+        }, this.client
+    );
   }
 
   private void cancel() {
@@ -169,10 +171,13 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static <T extends GameRules.Rule<T>> RuleContext of(
-        GameRules gameRules, GameRules.Key<T> key, boolean mutable
+        GameRules gameRules,
+        GameRules.Key<T> key,
+        boolean mutable
     ) {
       T rule = gameRules.get(key);
-      return new RuleContext(key.getName(),
+      return new RuleContext(
+          key.getName(),
           getName(key),
           getTooltip(key, rule),
           getNarrationName(key, rule),
@@ -279,7 +284,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
       this.createTime = Util.getMeasuringTimeMs();
 
-      LinearLayoutWidget layout = LinearLayoutWidget.vertical(this.getContentLeft(),
+      LinearLayoutWidget layout = LinearLayoutWidget.vertical(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -298,8 +304,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .hideBackground()
           .build());
 
-      this.addLayout(layout,
-          (self) -> self.setPositionAndDimensions(this.getContentLeft(),
+      this.addLayout(
+          layout,
+          (self) -> self.setPositionAndDimensions(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -337,7 +345,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public ErrorEntry(TextRenderer textRenderer, int index, int left, int top, int width) {
       super(textRenderer, index, left, top, width, 36);
 
-      LinearLayoutWidget layout = LinearLayoutWidget.vertical(this.getContentLeft(),
+      LinearLayoutWidget layout = LinearLayoutWidget.vertical(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -353,8 +362,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .hideBackground()
           .build());
 
-      this.addLayout(layout,
-          (self) -> self.setPositionAndDimensions(this.getContentLeft(),
+      this.addLayout(
+          layout,
+          (self) -> self.setPositionAndDimensions(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -375,7 +386,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public EmptyEntry(TextRenderer textRenderer, int index, int left, int top, int width) {
       super(textRenderer, index, left, top, width, 36);
 
-      LinearLayoutWidget layout = LinearLayoutWidget.vertical(this.getContentLeft(),
+      LinearLayoutWidget layout = LinearLayoutWidget.vertical(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -391,8 +403,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .hideBackground()
           .build());
 
-      this.addLayout(layout,
-          (self) -> self.setPositionAndDimensions(this.getContentLeft(),
+      this.addLayout(
+          layout,
+          (self) -> self.setPositionAndDimensions(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -411,7 +425,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public CategoryEntry(Text text, TextRenderer textRenderer, int index, int left, int top, int width) {
       super(textRenderer, index, left, top, width);
 
-      LinearLayoutWidget layout = LinearLayoutWidget.vertical(this.getContentLeft(),
+      LinearLayoutWidget layout = LinearLayoutWidget.vertical(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -427,8 +442,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .hideBackground()
           .build());
 
-      this.addLayout(layout,
-          (self) -> self.setPositionAndDimensions(this.getContentLeft(),
+      this.addLayout(
+          layout,
+          (self) -> self.setPositionAndDimensions(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -440,7 +457,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     @Override
     protected void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-      renderRowShade(context,
+      renderRowShade(
+          context,
           this.getContentLeft(),
           this.getContentTop(),
           this.getContentRight(),
@@ -460,9 +478,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     protected final RuleContext context;
 
-    protected RuleEntry(
-        RuleContext context, TextRenderer textRenderer, int index, int left, int top, int width
-    ) {
+    protected RuleEntry(RuleContext context, TextRenderer textRenderer, int index, int left, int top, int width) {
       super(textRenderer, index, left, top, width);
 
       this.context = context;
@@ -486,20 +502,25 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     private void createAndAddTooltip() {
-      NonPositioningLayoutWidget layout = new NonPositioningLayoutWidget(this.getContentLeft(),
+      NonPositioningLayoutWidget layout = new NonPositioningLayoutWidget(
+          this.getContentLeft(),
           this.getContentTop(),
           this.getContentWidth(),
           this.getContentHeight()
       );
-      TooltipWidget tooltip = layout.add(new TooltipWidget(this.context.getTooltip()),
-          (parent, self) -> self.setDimensionsAndPosition(parent.getWidth(),
+      TooltipWidget tooltip = layout.add(
+          new TooltipWidget(this.context.getTooltip()),
+          (parent, self) -> self.setDimensionsAndPosition(
+              parent.getWidth(),
               parent.getHeight(),
               parent.getX(),
               parent.getY()
           )
       );
-      this.addLayout(layout,
-          (self) -> self.setPositionAndDimensions(this.getContentLeft(),
+      this.addLayout(
+          layout,
+          (self) -> self.setPositionAndDimensions(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -509,7 +530,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     protected void createAndAddContent() {
-      LinearLayoutWidget layout = LinearLayoutWidget.horizontal(this.getContentLeft(),
+      LinearLayoutWidget layout = LinearLayoutWidget.horizontal(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -517,21 +539,26 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .spacing(GuiUtil.PADDING)
           .defaultOffAxisContentAlignCenter();
 
-      layout.add(LabelWidget.builder(this.textRenderer, this.context.getName())
-          .alignTextLeft()
-          .alignTextCenterY()
-          .overflowBehavior(LabelWidget.OverflowBehavior.WRAP)
-          .maxLines(2)
-          .showShadow()
-          .hideBackground()
-          .build(), (parent, self) -> self.setDimensions(this.getLabelWidth(parent), this.getContentHeight()));
+      layout.add(
+          LabelWidget.builder(this.textRenderer, this.context.getName())
+              .alignTextLeft()
+              .alignTextCenterY()
+              .overflowBehavior(LabelWidget.OverflowBehavior.WRAP)
+              .maxLines(2)
+              .showShadow()
+              .hideBackground()
+              .build(), (parent, self) -> self.setDimensions(this.getLabelWidth(parent), this.getContentHeight())
+      );
 
-      layout.add(this.createControlWidget(),
+      layout.add(
+          this.createControlWidget(),
           (parent, self) -> self.setDimensions(this.getControlWidth(parent), this.getContentHeight())
       );
 
-      this.addLayout(layout,
-          (self) -> self.setPositionAndDimensions(this.getContentLeft(),
+      this.addLayout(
+          layout,
+          (self) -> self.setPositionAndDimensions(
+              this.getContentLeft(),
               this.getContentTop(),
               this.getContentWidth(),
               this.getContentHeight()
@@ -551,7 +578,12 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
   public static class BooleanRuleEntry extends RuleEntry {
     protected BooleanRuleEntry(
-        RuleContext context, TextRenderer textRenderer, int index, int left, int top, int width
+        RuleContext context,
+        TextRenderer textRenderer,
+        int index,
+        int left,
+        int top,
+        int width
     ) {
       super(context, textRenderer, index, left, top, width);
     }
@@ -573,9 +605,13 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static FlowListWidget.EntryFactory<BooleanRuleEntry> factory(
-        GameRules gameRules, GameRules.Key<GameRules.BooleanRule> key, boolean mutable, TextRenderer textRenderer
+        GameRules gameRules,
+        GameRules.Key<GameRules.BooleanRule> key,
+        boolean mutable,
+        TextRenderer textRenderer
     ) {
-      return (index, left, top, width) -> new BooleanRuleEntry(RuleContext.of(gameRules, key, mutable),
+      return (index, left, top, width) -> new BooleanRuleEntry(
+          RuleContext.of(gameRules, key, mutable),
           textRenderer,
           index,
           left,
@@ -586,9 +622,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
   }
 
   public static class IntRuleEntry extends RuleEntry {
-    protected IntRuleEntry(
-        RuleContext context, TextRenderer textRenderer, int index, int left, int top, int width
-    ) {
+    protected IntRuleEntry(RuleContext context, TextRenderer textRenderer, int index, int left, int top, int width) {
       super(context, textRenderer, index, left, top, width);
     }
 
@@ -605,7 +639,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           Text value = Text.of(IntRuleEntry.this.getIntValue().toString());
           int x = this.getX() + this.getWidth() / 2;
           int y = this.getY() + (this.getHeight() - textRenderer.fontHeight) / 2;
-          context.drawCenteredTextWithShadow(textRenderer,
+          context.drawCenteredTextWithShadow(
+              textRenderer,
               value,
               x,
               y,
@@ -621,9 +656,13 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static FlowListWidget.EntryFactory<IntRuleEntry> factory(
-        GameRules gameRules, GameRules.Key<GameRules.IntRule> key, boolean mutable, TextRenderer textRenderer
+        GameRules gameRules,
+        GameRules.Key<GameRules.IntRule> key,
+        boolean mutable,
+        TextRenderer textRenderer
     ) {
-      return (index, left, top, width) -> new IntRuleEntry(RuleContext.of(gameRules, key, mutable),
+      return (index, left, top, width) -> new IntRuleEntry(
+          RuleContext.of(gameRules, key, mutable),
           textRenderer,
           index,
           left,

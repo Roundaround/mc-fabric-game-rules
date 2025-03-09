@@ -2,8 +2,8 @@ package me.roundaround.gamerulesmod.client.gui.screen;
 
 import me.roundaround.gamerulesmod.client.gui.widget.GameRuleListWidget;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
-import me.roundaround.roundalib.client.gui.GuiUtil;
-import me.roundaround.roundalib.client.gui.layout.screen.ThreeSectionLayoutWidget;
+import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
+import me.roundaround.gamerulesmod.roundalib.client.gui.layout.screen.ThreeSectionLayoutWidget;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CheckboxWidget;
