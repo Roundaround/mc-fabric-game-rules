@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Either;
 import io.netty.buffer.ByteBuf;
 import me.roundaround.gamerulesmod.generated.Constants;
 import me.roundaround.gamerulesmod.generated.Variant;
+import me.roundaround.gamerulesmod.server.GameRulesStorage;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -69,7 +70,8 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
 
   public static boolean isMutable(GameRules.Key<?> key, ServerPlayerEntity player) {
     if (getNonCheatRules().contains(key)) {
-      return true;
+      return !Constants.ACTIVE_VARIANT.equals(Variant.HARDCORE) ||
+             !GameRulesStorage.getInstance(player.getServer()).hasChanged(key);
     }
     return player.hasPermissionLevel(player.server.getOpPermissionLevel());
   }

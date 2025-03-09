@@ -2,12 +2,12 @@ package me.roundaround.gamerulesmod.mixin;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.util.GameRulesExtensions;
+import me.roundaround.gamerulesmod.util.Util;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.GameRules;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 
 import java.util.Map;
 
@@ -24,12 +24,12 @@ public abstract class GameRulesMixin implements GameRulesExtensions {
 
   @Override
   public Rule<?> gamerulesmod$get(String id) {
-    return this.get(createBooleanKey(id));
+    return this.get(Util.createRuleKey(id));
   }
 
   @Override
   public Either<Boolean, Integer> gamerulesmod$getValue(String id) {
-    return switch (this.rules.get(createBooleanKey(id))) {
+    return switch (this.rules.get(Util.createRuleKey(id))) {
       case BooleanRule booleanRule -> Either.left(booleanRule.get());
       case IntRule intRule -> Either.right(intRule.get());
       default -> Either.left(false);
@@ -38,21 +38,11 @@ public abstract class GameRulesMixin implements GameRulesExtensions {
 
   @Override
   public void gamerulesmod$set(String id, boolean value, MinecraftServer server) {
-    this.get(createBooleanKey(id)).set(value, server);
+    this.get(Util.createBooleanKey(id)).set(value, server);
   }
 
   @Override
   public void gamerulesmod$set(String id, int value, MinecraftServer server) {
-    this.get(createIntKey(id)).set(value, server);
-  }
-
-  @Unique
-  private static Key<BooleanRule> createBooleanKey(String id) {
-    return new Key<>(id, GameRules.Category.PLAYER);
-  }
-
-  @Unique
-  private static Key<IntRule> createIntKey(String id) {
-    return new Key<>(id, GameRules.Category.PLAYER);
+    this.get(Util.createIntKey(id)).set(value, server);
   }
 }
