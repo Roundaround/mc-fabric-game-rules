@@ -5,8 +5,7 @@ plugins {
 
 roundalib {
   variants {
-    create("hardcore")
-    create("technical")
+    create("hardcore", "technical")
     buildAndPublishAll()
   }
 }
