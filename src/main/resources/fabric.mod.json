@@ -13,9 +13,6 @@
     "issues": "https://github.com/Roundaround/mc-fabric-game-rules/issues"
   },
   "license": "MIT",
-  "mixins": [
-    "gamerulesmod.mixins.json"
-  ],
   "custom": {
     "loom:injected_interfaces": {
       "net/minecraft/class_1928": [
