@@ -78,6 +78,15 @@ public class GameRulesStorage extends PersistentState {
     return this.history.containsKey(id) ? this.history.get(id).getPreviousValue() : null;
   }
 
+  public void recordChange(GameRules.Key<?> key, Either<Boolean, Integer> previousValue) {
+    this.recordChange(key.getName(), previousValue);
+  }
+
+  public void recordChange(String id, Either<Boolean, Integer> previousValue) {
+    this.history.computeIfAbsent(id, (key) -> GameRuleHistory.create(previousValue)).recordChange(previousValue);
+    this.markDirty();
+  }
+
   @Override
   public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
     NbtList historyNbt = new NbtList();

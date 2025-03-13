@@ -4,24 +4,34 @@ import com.mojang.datafixers.util.Either;
 import io.netty.buffer.ByteBuf;
 import me.roundaround.gamerulesmod.generated.Constants;
 import me.roundaround.gamerulesmod.generated.Variant;
+import me.roundaround.gamerulesmod.roundalib.network.CustomCodecs;
 import me.roundaround.gamerulesmod.server.GameRulesStorage;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.function.ValueLists;
 import net.minecraft.world.GameRules;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.function.IntFunction;
+import java.util.function.Predicate;
 
-public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutable) {
+public record RuleInfo(String id, Either<Boolean, Integer> value, State state, Date changed) {
   public static final PacketCodec<ByteBuf, RuleInfo> PACKET_CODEC = PacketCodec.tuple(
       PacketCodecs.STRING,
       RuleInfo::id,
       PacketCodecs.either(PacketCodecs.BOOL, PacketCodecs.INTEGER),
       RuleInfo::value,
-      PacketCodecs.BOOL,
-      RuleInfo::mutable,
+      State.PACKET_CODEC,
+      RuleInfo::state,
+      CustomCodecs.nullable(CustomCodecs.DATE),
+      RuleInfo::changed,
       RuleInfo::new
   );
 
@@ -57,36 +67,65 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
     String id = key.getName();
     Either<Boolean, Integer> value = gameRules.gamerulesmod$getValue(id);
     if (player == null) {
-      return new RuleInfo(id, value, false);
+      return new RuleInfo(id, value, State.IMMUTABLE, null);
     }
 
-    boolean mutable = isMutable(key, player);
-    return new RuleInfo(id, value, mutable);
+    return new RuleInfo(id, value, getState(key, player), getChangedDate(key, player));
   }
 
   public void applyValue(GameRules gameRules) {
     gameRules.gamerulesmod$set(this.id(), this.value());
   }
 
-  public static boolean isMutable(GameRules.Key<?> key, ServerPlayerEntity player) {
-    if (getNonCheatRules().contains(key)) {
-      return !Constants.ACTIVE_VARIANT.equals(Variant.HARDCORE) ||
-             !GameRulesStorage.getInstance(player.getServer()).hasChanged(key);
+  public static State getState(GameRules.Key<?> key, ServerPlayerEntity player) {
+    MinecraftServer server = player.server;
+    ServerWorld world = player.getServerWorld();
+
+    if (!server.isSingleplayer() && !player.hasPermissionLevel(server.getOpPermissionLevel())) {
+      return State.IMMUTABLE;
     }
-    return player.hasPermissionLevel(player.server.getOpPermissionLevel());
+
+    return switch (Constants.ACTIVE_VARIANT) {
+      case Variant.HARDCORE -> getStateForHardcore(key, server, world);
+      case Variant.TECHNICAL -> getStateForTechnical(key, server);
+      case Variant.BASE -> State.MUTABLE;
+    };
+  }
+
+  private static State getStateForHardcore(GameRules.Key<?> key, MinecraftServer server, ServerWorld world) {
+    if (!world.getLevelProperties().isHardcore()) {
+      return getStateForTechnical(key, server);
+    }
+    if (!HARDCORE_NON_CHEAT.contains(key)) {
+      return State.IMMUTABLE;
+    }
+    return GameRulesStorage.getInstance(server).hasChanged(key) ? State.LOCKED : State.MUTABLE;
+  }
+
+  private static State getStateForTechnical(GameRules.Key<?> key, MinecraftServer server) {
+    return TECHNICAL_NON_CHEAT.contains(key) ? State.MUTABLE : State.IMMUTABLE;
+  }
+
+  private static Date getChangedDate(GameRules.Key<?> key, ServerPlayerEntity player) {
+    return GameRulesStorage.getInstance(player.server).getLastChangeDate(key);
   }
 
   public static List<RuleInfo> collect(
       final GameRules gameRules,
       final ServerPlayerEntity player,
-      final boolean includeImmutable
+      @Nullable final Predicate<State> stateFilter
   ) {
     final ArrayList<RuleInfo> ruleInfos = new ArrayList<>();
     GameRules.accept(new GameRules.Visitor() {
       @Override
       public <T extends GameRules.Rule<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type) {
+        if (!(gameRules.get(key) instanceof GameRules.BooleanRule) &&
+            !(gameRules.get(key) instanceof GameRules.IntRule)) {
+          return;
+        }
+
         RuleInfo ruleInfo = RuleInfo.of(gameRules, key, player);
-        if (includeImmutable || ruleInfo.mutable()) {
+        if (stateFilter == null || stateFilter.test(ruleInfo.state())) {
           ruleInfos.add(ruleInfo);
         }
       }
@@ -94,11 +133,27 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, boolean mutabl
     return ruleInfos;
   }
 
-  private static Set<GameRules.Key<?>> getNonCheatRules() {
-    return switch (Constants.ACTIVE_VARIANT) {
-      case Variant.HARDCORE -> HARDCORE_NON_CHEAT;
-      case Variant.TECHNICAL -> TECHNICAL_NON_CHEAT;
-      default -> Set.of();
-    };
+  public enum State {
+    MUTABLE(0), IMMUTABLE(1), LOCKED(2);
+
+    public static final IntFunction<State> ID_TO_VALUE_FUNCTION = ValueLists.createIdToValueFunction(
+        State::getId,
+        values(),
+        ValueLists.OutOfBoundsHandling.WRAP
+    );
+    public static final PacketCodec<ByteBuf, State> PACKET_CODEC = PacketCodecs.indexed(
+        ID_TO_VALUE_FUNCTION,
+        State::getId
+    );
+
+    private final int id;
+
+    State(int id) {
+      this.id = id;
+    }
+
+    public int getId() {
+      return this.id;
+    }
   }
 }

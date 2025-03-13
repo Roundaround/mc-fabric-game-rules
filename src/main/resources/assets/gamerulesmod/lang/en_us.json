@@ -4,5 +4,9 @@
   "gamerulesmod.main.error1": "Failed to load game rules.",
   "gamerulesmod.main.error2": "Check the logs for details.",
   "gamerulesmod.main.none": "Nothing to show",
-  "gamerulesmod.main.mutable": "Show immutable rules"
+  "gamerulesmod.main.showImmutable": "Show read-only rules",
+  "gamerulesmod.main.date": "Last changed: %s",
+  "gamerulesmod.main.never": "(never)",
+  "gamerulesmod.main.locked": "This rule cannot be changed again",
+  "gamerulesmod.main.immutable": "This rule is read-only"
 }

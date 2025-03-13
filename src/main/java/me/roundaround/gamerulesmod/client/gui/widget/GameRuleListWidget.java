@@ -1,6 +1,7 @@
 package me.roundaround.gamerulesmod.client.gui.widget;
 
 import com.mojang.datafixers.util.Either;
+import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
 import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.NonPositioningLayoutWidget;
@@ -17,10 +18,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.LoadingDisplay;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.screen.narration.NarrationPart;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
@@ -28,18 +28,44 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 import net.minecraft.world.GameRules;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleListWidget.Entry> implements AutoCloseable {
-  private CancelHandle cancelHandle;
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM);
 
-  public GameRuleListWidget(MinecraftClient client, ThreeSectionLayoutWidget layout) {
+  private static GameRules defaultRules = null;
+
+  private final BiConsumer<Boolean, Boolean> onRuleChange;
+
+  private CancelHandle cancelHandle;
+  private boolean showImmutable = false;
+
+  public GameRuleListWidget(
+      MinecraftClient client,
+      ThreeSectionLayoutWidget layout,
+      BiConsumer<Boolean, Boolean> onRuleChange
+  ) {
     super(client, layout);
+    this.onRuleChange = onRuleChange;
   }
 
-  public void fetch(boolean showImmutable) {
+  public void setShowImmutable(boolean showImmutable) {
+    this.showImmutable = showImmutable;
+    this.fetch();
+  }
+
+  public boolean isShowingImmutable() {
+    return this.showImmutable;
+  }
+
+  public void fetch() {
     this.cancel();
 
     this.clearEntries();
@@ -54,7 +80,12 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           if (throwable != null) {
             this.setError();
           } else {
-            this.setRules(rules, showImmutable);
+            try {
+              this.setRules(rules, showImmutable);
+            } catch (Exception e) {
+              GameRulesMod.LOGGER.error("Exception thrown while populating rules list!", e);
+              this.setError();
+            }
           }
         }, this.client
     );
@@ -79,11 +110,13 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     final TextRenderer textRenderer = this.client.textRenderer;
 
     final GameRules gameRules = new GameRules();
-    final HashMap<String, Boolean> mutability = new HashMap<>();
+    final HashMap<String, RuleInfo.State> stateMap = new HashMap<>();
+    final HashMap<String, Date> changedMap = new HashMap<>();
 
     rules.forEach((ruleInfo) -> {
       ruleInfo.applyValue(gameRules);
-      mutability.put(ruleInfo.id(), ruleInfo.mutable());
+      stateMap.put(ruleInfo.id(), ruleInfo.state());
+      changedMap.put(ruleInfo.id(), ruleInfo.changed());
     });
 
     final HashMap<GameRules.Category, HashMap<GameRules.Key<?>, FlowListWidget.EntryFactory<? extends RuleEntry>>> ruleEntries = new HashMap<>();
@@ -91,17 +124,35 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     GameRules.accept(new GameRules.Visitor() {
       @Override
       public void visitBoolean(GameRules.Key<GameRules.BooleanRule> key, GameRules.Type<GameRules.BooleanRule> type) {
-        boolean mutable = mutability.getOrDefault(key.getName(), false);
-        if (showImmutable || mutable) {
-          this.addEntry(key, BooleanRuleEntry.factory(gameRules, key, mutable, textRenderer));
+        RuleInfo.State state = stateMap.getOrDefault(key.getName(), RuleInfo.State.IMMUTABLE);
+        if (showImmutable || !state.equals(RuleInfo.State.IMMUTABLE)) {
+          this.addEntry(
+              key, BooleanRuleEntry.factory(
+                  gameRules,
+                  key,
+                  state,
+                  changedMap.get(key.getName()),
+                  GameRuleListWidget.this::onRuleChange,
+                  textRenderer
+              )
+          );
         }
       }
 
       @Override
       public void visitInt(GameRules.Key<GameRules.IntRule> key, GameRules.Type<GameRules.IntRule> type) {
-        boolean mutable = mutability.getOrDefault(key.getName(), false);
-        if (showImmutable || mutable) {
-          this.addEntry(key, IntRuleEntry.factory(gameRules, key, mutable, textRenderer));
+        RuleInfo.State state = stateMap.getOrDefault(key.getName(), RuleInfo.State.IMMUTABLE);
+        if (showImmutable || !state.equals(RuleInfo.State.IMMUTABLE)) {
+          this.addEntry(
+              key, IntRuleEntry.factory(
+                  gameRules,
+                  key,
+                  state,
+                  changedMap.get(key.getName()),
+                  GameRuleListWidget.this::onRuleChange,
+                  textRenderer
+              )
+          );
         }
       }
 
@@ -124,14 +175,29 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .forEach((ruleEntry) -> this.addEntry(ruleEntry.getValue()));
     });
 
+    this.onRuleChange();
     this.refreshPositions();
+  }
+
+  private void onRuleChange() {
+    boolean allValid = this.entries.stream()
+        .allMatch((entry) -> !(entry instanceof RuleEntry ruleEntry) || ruleEntry.isValid());
+    boolean anyDirty = this.entries.stream()
+        .anyMatch((entry) -> entry instanceof RuleEntry ruleEntry && ruleEntry.isDirty());
+
+    this.onRuleChange.accept(allValid, anyDirty);
   }
 
   public Map<String, Either<Boolean, Integer>> getDirtyValues() {
     HashMap<String, Either<Boolean, Integer>> values = new HashMap<>();
     for (Entry entry : this.entries) {
-      if (entry instanceof RuleEntry ruleEntry && ruleEntry.isDirty()) {
-        values.put(ruleEntry.getId(), ruleEntry.getValue());
+      if (entry instanceof RuleEntry ruleEntry) {
+        if (!ruleEntry.isValid()) {
+          return Map.of();
+        }
+        if (ruleEntry.isDirty()) {
+          values.put(ruleEntry.getId(), ruleEntry.getValue());
+        }
       }
     }
     return values;
@@ -142,15 +208,24 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.cancel();
   }
 
+  private static GameRules getDefaultRules() {
+    if (defaultRules == null) {
+      defaultRules = new GameRules();
+    }
+    return defaultRules;
+  }
+
   public static class RuleContext {
     private final String id;
     private final Text name;
     private final List<Text> tooltip;
     private final String narrationName;
     private final Either<Boolean, Integer> initialValue;
-    private final boolean mutable;
+    private final RuleInfo.State state;
+    private final Runnable onChange;
 
     private Either<Boolean, Integer> value;
+    private boolean valid = true;
 
     private RuleContext(
         String id,
@@ -158,14 +233,16 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         List<Text> tooltip,
         String narrationName,
         Either<Boolean, Integer> initialValue,
-        boolean mutable
+        RuleInfo.State state,
+        Runnable onChange
     ) {
       this.id = id;
       this.name = name;
       this.tooltip = tooltip;
       this.narrationName = narrationName;
       this.initialValue = initialValue;
-      this.mutable = mutable;
+      this.state = state;
+      this.onChange = onChange;
 
       this.value = initialValue;
     }
@@ -173,16 +250,18 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public static <T extends GameRules.Rule<T>> RuleContext of(
         GameRules gameRules,
         GameRules.Key<T> key,
-        boolean mutable
+        RuleInfo.State state,
+        Date changed,
+        Runnable onChange
     ) {
-      T rule = gameRules.get(key);
       return new RuleContext(
           key.getName(),
           getName(key),
-          getTooltip(key, rule),
-          getNarrationName(key, rule),
+          getTooltip(key, state, changed),
+          getNarrationName(key),
           gameRules.gamerulesmod$getValue(key.getName()),
-          mutable
+          state,
+          onChange
       );
     }
 
@@ -207,14 +286,14 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public void setValue(boolean value) {
-      if (!this.mutable) {
+      if (!this.isMutable()) {
         return;
       }
       this.value = Either.left(value);
     }
 
     public void setValue(int value) {
-      if (!this.mutable) {
+      if (!this.isMutable()) {
         return;
       }
       this.value = Either.right(value);
@@ -224,20 +303,52 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       return !Objects.equals(this.initialValue, this.value);
     }
 
+    public boolean isValid() {
+      return this.valid;
+    }
+
+    public void setValid(boolean valid) {
+      this.valid = valid;
+    }
+
     public boolean isMutable() {
-      return this.mutable;
+      return this.state.equals(RuleInfo.State.MUTABLE);
+    }
+
+    public void markChanged() {
+      this.onChange.run();
     }
 
     private static <T extends GameRules.Rule<T>> Text getName(GameRules.Key<T> key) {
       return Text.translatable(key.getTranslationKey());
     }
 
-    private static <T extends GameRules.Rule<T>> List<Text> getTooltip(GameRules.Key<T> key, T rule) {
+    private static <T extends GameRules.Rule<T>> List<Text> getTooltip(
+        GameRules.Key<T> key,
+        RuleInfo.State state,
+        Date changed
+    ) {
       ArrayList<Text> lines = new ArrayList<>();
       lines.add(Text.literal(key.getName()).formatted(Formatting.YELLOW));
       getDescription(key).ifPresent(lines::add);
-      lines.add(getDefaultLine(rule));
+      lines.add(getDefaultLine(key));
+
+      Text formattedChanged = changed == null ?
+          Text.translatable("gamerulesmod.main.never").formatted(Formatting.GRAY) :
+          Text.literal(formatDate(changed)).formatted(Formatting.AQUA);
+      lines.add(Text.translatable("gamerulesmod.main.date", formattedChanged));
+
+      if (state.equals(RuleInfo.State.LOCKED)) {
+        lines.add(Text.translatable("gamerulesmod.main.locked").formatted(Formatting.GRAY, Formatting.ITALIC));
+      } else if (state.equals(RuleInfo.State.IMMUTABLE)) {
+        lines.add(Text.translatable("gamerulesmod.main.immutable").formatted(Formatting.GRAY, Formatting.ITALIC));
+      }
+
       return lines;
+    }
+
+    private static String formatDate(Date date) {
+      return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().format(DATE_TIME_FORMATTER);
     }
 
     private static <T extends GameRules.Rule<T>> Optional<Text> getDescription(GameRules.Key<T> key) {
@@ -248,12 +359,13 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       return Optional.empty();
     }
 
-    private static <T extends GameRules.Rule<T>> Text getDefaultLine(T rule) {
-      return Text.translatable("editGamerule.default", Text.literal(rule.serialize())).formatted(Formatting.GRAY);
+    private static <T extends GameRules.Rule<T>> Text getDefaultLine(GameRules.Key<T> key) {
+      return Text.translatable("editGamerule.default", Text.literal(getDefaultRules().get(key).serialize()))
+          .formatted(Formatting.GRAY);
     }
 
-    private static <T extends GameRules.Rule<T>> String getNarrationName(GameRules.Key<T> key, T rule) {
-      String defaultLine = getDefaultLine(rule).getString();
+    private static <T extends GameRules.Rule<T>> String getNarrationName(GameRules.Key<T> key) {
+      String defaultLine = getDefaultLine(key).getString();
       return getDescription(key).map((description) -> description.getString() + "\n" + defaultLine).orElse(defaultLine);
     }
   }
@@ -493,6 +605,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       return this.context.isDirty();
     }
 
+    public boolean isValid() {
+      return this.context.isValid();
+    }
+
     public String getId() {
       return this.context.getId();
     }
@@ -572,7 +688,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     protected int getControlWidth(LinearLayoutWidget layout) {
-      return Math.max(CONTROL_MIN_WIDTH, Math.round(layout.getWidth() * 0.3f));
+      return Math.max(CONTROL_MIN_WIDTH, Math.round(layout.getWidth() * 0.25f));
     }
   }
 
@@ -594,24 +710,31 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     @Override
     protected ClickableWidget createControlWidget() {
-      var result = CyclingButtonWidget.onOffBuilder(this.getBooleanValue())
+      var widget = CyclingButtonWidget.onOffBuilder(this.getBooleanValue())
           .omitKeyText()
           .narration((button) -> button.getGenericNarrationMessage()
               .append("\n")
               .append(this.context.getNarrationName()))
-          .build(0, 0, 1, 1, this.context.getName(), (button, value) -> this.context.setValue(value));
-      result.active = this.context.isMutable();
-      return result;
+          .build(
+              0, 0, 1, 1, this.context.getName(), (button, value) -> {
+                this.context.setValue(value);
+                this.context.markChanged();
+              }
+          );
+      widget.active = this.context.isMutable();
+      return widget;
     }
 
     public static FlowListWidget.EntryFactory<BooleanRuleEntry> factory(
         GameRules gameRules,
         GameRules.Key<GameRules.BooleanRule> key,
-        boolean mutable,
+        RuleInfo.State state,
+        Date changed,
+        Runnable onChange,
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new BooleanRuleEntry(
-          RuleContext.of(gameRules, key, mutable),
+          RuleContext.of(gameRules, key, state, changed, onChange),
           textRenderer,
           index,
           left,
@@ -632,37 +755,45 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     @Override
     protected ClickableWidget createControlWidget() {
-      return new ClickableWidget(0, 0, 1, 1, Text.of("Hello world")) {
-        @Override
-        protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
-          TextRenderer textRenderer = IntRuleEntry.this.textRenderer;
-          Text value = Text.of(IntRuleEntry.this.getIntValue().toString());
-          int x = this.getX() + this.getWidth() / 2;
-          int y = this.getY() + (this.getHeight() - textRenderer.fontHeight) / 2;
-          context.drawCenteredTextWithShadow(
-              textRenderer,
-              value,
-              x,
-              y,
-              IntRuleEntry.this.context.isMutable() ? GuiUtil.LABEL_COLOR : Colors.LIGHT_GRAY
-          );
+      var widget = new TextFieldWidget(
+          this.textRenderer,
+          CONTROL_MIN_WIDTH,
+          20,
+          this.context.getName().copy().append(this.context.getNarrationName()).append("\n")
+      );
+      widget.setText(Integer.toString(IntRuleEntry.this.getIntValue()));
+      widget.setChangedListener((value) -> {
+        int previousValue = IntRuleEntry.this.getIntValue();
+        boolean previousValid = this.context.isValid();
+
+        try {
+          int parsed = Integer.parseInt(value);
+          this.context.setValue(parsed);
+          this.context.setValid(true);
+          widget.setEditableColor(GuiUtil.LABEL_COLOR);
+        } catch (Exception e) {
+          this.context.setValid(false);
+          widget.setEditableColor(GuiUtil.ERROR_COLOR);
         }
 
-        @Override
-        protected void appendClickableNarrations(NarrationMessageBuilder builder) {
-          builder.put(NarrationPart.TITLE, this.getMessage());
+        if (previousValue != IntRuleEntry.this.getIntValue() || previousValid != this.context.isValid()) {
+          this.context.markChanged();
         }
-      };
+      });
+      widget.active = this.context.isMutable();
+      return widget;
     }
 
     public static FlowListWidget.EntryFactory<IntRuleEntry> factory(
         GameRules gameRules,
         GameRules.Key<GameRules.IntRule> key,
-        boolean mutable,
+        RuleInfo.State state,
+        Date changed,
+        Runnable onChange,
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new IntRuleEntry(
-          RuleContext.of(gameRules, key, mutable),
+          RuleContext.of(gameRules, key, state, changed, onChange),
           textRenderer,
           index,
           left,

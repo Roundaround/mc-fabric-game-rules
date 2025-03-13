@@ -17,6 +17,7 @@ public class GameRuleScreen extends Screen {
   private final Screen parent;
 
   private GameRuleListWidget list;
+  private ButtonWidget saveButton;
 
   public GameRuleScreen(Screen parent) {
     super(Text.translatable("gamerulesmod.main.title"));
@@ -28,22 +29,27 @@ public class GameRuleScreen extends Screen {
     assert this.client != null;
     assert this.client.world != null;
 
+    this.list = this.layout.addBody(new GameRuleListWidget(this.client, this.layout, this::onRuleChange));
+
     this.layout.setHeaderHeight(this.layout.getHeaderHeight() + 2 * GuiUtil.PADDING);
     this.layout.addHeader(this.textRenderer, this.title);
-    this.layout.addHeader(CheckboxWidget.builder(Text.translatable("gamerulesmod.main.mutable"), this.textRenderer)
-        .callback((checkbox, checked) -> this.list.fetch(checked))
-        .checked(false)
+    this.layout.addHeader(CheckboxWidget.builder(
+            Text.translatable("gamerulesmod.main.showImmutable"),
+            this.textRenderer
+        )
+        .callback((checkbox, checked) -> this.list.setShowImmutable(checked))
+        .checked(this.list.isShowingImmutable())
         .build());
 
-    this.list = this.layout.addBody(new GameRuleListWidget(this.client, this.layout));
-
-    this.layout.addFooter(ButtonWidget.builder(ScreenTexts.DONE, this::save).width(BUTTON_WIDTH).build());
+    this.saveButton = this.layout.addFooter(ButtonWidget.builder(ScreenTexts.DONE, this::save)
+        .width(BUTTON_WIDTH)
+        .build());
     this.layout.addFooter(ButtonWidget.builder(ScreenTexts.CANCEL, this::cancel).width(BUTTON_WIDTH).build());
 
     this.layout.forEachChild(this::addDrawableChild);
     this.initTabNavigation();
 
-    this.list.fetch(true);
+    this.list.fetch();
   }
 
   @Override
@@ -53,13 +59,12 @@ public class GameRuleScreen extends Screen {
 
   @Override
   public void close() {
-    if (this.client == null) {
-      return;
-    }
     if (this.list != null) {
       this.list.close();
     }
-    this.client.setScreen(this.parent);
+    if (this.client != null) {
+      this.client.setScreen(this.parent);
+    }
   }
 
   private void save(ButtonWidget button) {
@@ -72,5 +77,9 @@ public class GameRuleScreen extends Screen {
 
   private void cancel(ButtonWidget button) {
     this.close();
+  }
+
+  private void onRuleChange(boolean allValid, boolean anyDirty) {
+    this.saveButton.active = allValid && anyDirty;
   }
 }

@@ -38,6 +38,10 @@ public class GameRuleHistory {
     return this.changes.isEmpty() ? null : this.changes.lastEntry().getValue();
   }
 
+  public void recordChange(Either<Boolean, Integer> previousValue) {
+    this.changes.put(new Date(), previousValue);
+  }
+
   public NbtCompound writeNbt(NbtCompound nbt) {
     nbt.put("OriginalValue", Util.eitherToNbt(this.originalValue));
 
@@ -66,5 +70,9 @@ public class GameRuleHistory {
     }
 
     return new GameRuleHistory(originalValue, changes);
+  }
+
+  public static GameRuleHistory create(Either<Boolean, Integer> originalValue) {
+    return new GameRuleHistory(originalValue, new TreeMap<>());
   }
 }

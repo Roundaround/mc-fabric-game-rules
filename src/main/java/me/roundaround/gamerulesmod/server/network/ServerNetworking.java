@@ -1,6 +1,8 @@
 package me.roundaround.gamerulesmod.server.network;
 
+import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.network.Networking;
+import me.roundaround.gamerulesmod.server.GameRulesStorage;
 import me.roundaround.gamerulesmod.util.RuleInfo;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
@@ -34,7 +36,13 @@ public final class ServerNetworking {
         return;
       }
 
-      sendFetch(player, payload.reqId(), RuleInfo.collect(world.getGameRules(), player, payload.includeImmutable()));
+      sendFetch(
+          player, payload.reqId(), RuleInfo.collect(
+              world.getGameRules(),
+              player,
+              (state) -> payload.includeImmutable() || !state.equals(RuleInfo.State.IMMUTABLE)
+          )
+      );
     });
   }
 
@@ -48,14 +56,21 @@ public final class ServerNetworking {
       }
 
       final GameRules gameRules = world.getGameRules();
-      final Set<String> mutableRules = RuleInfo.collect(gameRules, player, false)
+      final Set<String> mutableRules = RuleInfo.collect(
+              gameRules,
+              player,
+              (state) -> state.equals(RuleInfo.State.MUTABLE)
+          )
           .stream()
           .map(RuleInfo::id)
           .collect(Collectors.toSet());
+      final GameRulesStorage historyStorage = GameRulesStorage.getInstance(server);
 
       payload.values().forEach((id, either) -> {
         if (mutableRules.contains(id)) {
+          Either<Boolean, Integer> previousValue = gameRules.gamerulesmod$getValue(id);
           gameRules.gamerulesmod$set(id, either);
+          historyStorage.recordChange(id, previousValue);
         }
       });
     });
