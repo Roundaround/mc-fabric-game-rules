@@ -1,6 +1,7 @@
 package me.roundaround.gamerulesmod.server.network;
 
 import com.mojang.datafixers.util.Either;
+import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.network.Networking;
 import me.roundaround.gamerulesmod.server.GameRulesStorage;
 import me.roundaround.gamerulesmod.util.RuleInfo;
@@ -65,14 +66,27 @@ public final class ServerNetworking {
           .map(RuleInfo::id)
           .collect(Collectors.toSet());
       final GameRulesStorage historyStorage = GameRulesStorage.getInstance(server);
+      final var warnCount = new Object() {
+        int value = 0;
+      };
 
       payload.values().forEach((id, either) -> {
-        if (mutableRules.contains(id)) {
-          Either<Boolean, Integer> previousValue = gameRules.gamerulesmod$getValue(id);
-          gameRules.gamerulesmod$set(id, either);
-          historyStorage.recordChange(id, previousValue);
+        if (!mutableRules.contains(id)) {
+          warnCount.value++;
         }
+
+        Either<Boolean, Integer> previousValue = gameRules.gamerulesmod$getValue(id);
+        gameRules.gamerulesmod$set(id, either);
+        historyStorage.recordChange(id, previousValue);
       });
+
+      if (warnCount.value > 0) {
+        GameRulesMod.LOGGER.warn(
+            "Player {} attempted to change {} game rule(s), but did not have permission to do so.",
+            player.getGameProfile().getName(),
+            warnCount.value
+        );
+      }
     });
   }
 }
