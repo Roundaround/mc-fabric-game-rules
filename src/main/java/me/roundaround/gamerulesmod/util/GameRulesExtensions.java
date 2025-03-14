@@ -5,6 +5,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.GameRules;
 
 public interface GameRulesExtensions {
+  default int gamerulesmod$size() {
+    return 0;
+  }
+
   default GameRules.Rule<?> gamerulesmod$get(String id) {
     return null;
   }

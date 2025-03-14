@@ -23,6 +23,11 @@ public abstract class GameRulesMixin implements GameRulesExtensions {
   public abstract <T extends GameRules.Rule<T>> T get(GameRules.Key<T> key);
 
   @Override
+  public int gamerulesmod$size() {
+    return this.rules.size();
+  }
+
+  @Override
   public Rule<?> gamerulesmod$get(String id) {
     return this.get(Util.createRuleKey(id));
   }

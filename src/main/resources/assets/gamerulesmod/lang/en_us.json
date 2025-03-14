@@ -5,8 +5,15 @@
   "gamerulesmod.main.error2": "Check the logs for details.",
   "gamerulesmod.main.none": "Nothing to show",
   "gamerulesmod.main.showImmutable": "Show read-only rules",
-  "gamerulesmod.main.date": "Last changed: %s",
+  "gamerulesmod.main.current": "Current: %s",
+  "gamerulesmod.main.date": "Changed: %s",
   "gamerulesmod.main.never": "(never)",
-  "gamerulesmod.main.locked": "This rule cannot be changed again",
-  "gamerulesmod.main.immutable": "This rule is read-only"
+  "gamerulesmod.main.immutable": "Read-only:",
+  "gamerulesmod.main.immutable.variant": "for variant \"%s\"",
+  "gamerulesmod.main.immutable.locked": "(%s) rule already changed",
+  "gamerulesmod.main.immutable.denied": "server OP required",
+  "gamerulesmod.confirm.title": "Are you sure you want to save your changes?",
+  "gamerulesmod.confirm.hardcore": "Game rules can only be changed once in hardcore worlds, so you will not be able to change them again.",
+  "gamerulesmod.confirm.summary": "Changes made:",
+  "gamerulesmod.confirm.save": "Save"
 }

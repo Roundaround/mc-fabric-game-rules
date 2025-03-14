@@ -81,28 +81,32 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, State state, D
     MinecraftServer server = player.server;
     ServerWorld world = player.getServerWorld();
 
-    if (!server.isSingleplayer() && !player.hasPermissionLevel(server.getOpPermissionLevel())) {
-      return State.IMMUTABLE;
+    boolean isMultiplayer = !server.isSingleplayer();
+    boolean hasOps = player.hasPermissionLevel(server.getOpPermissionLevel());
+    boolean isHardcore = world.getLevelProperties().isHardcore();
+
+    if (isMultiplayer && !hasOps) {
+      return State.DENIED;
     }
 
-    return switch (Constants.ACTIVE_VARIANT) {
-      case Variant.HARDCORE -> getStateForHardcore(key, server, world);
-      case Variant.TECHNICAL -> getStateForTechnical(key, server);
+    State state = switch (Constants.ACTIVE_VARIANT) {
+      case Variant.HARDCORE -> isHardcore ? getStateForHardcore(key) : getStateForTechnical(key);
+      case Variant.TECHNICAL -> getStateForTechnical(key);
       case Variant.BASE -> State.MUTABLE;
     };
+
+    if (isHardcore && state.equals(State.MUTABLE)) {
+      state = GameRulesStorage.getInstance(server).hasChanged(key) ? State.LOCKED : state;
+    }
+
+    return state;
   }
 
-  private static State getStateForHardcore(GameRules.Key<?> key, MinecraftServer server, ServerWorld world) {
-    if (!world.getLevelProperties().isHardcore()) {
-      return getStateForTechnical(key, server);
-    }
-    if (!HARDCORE_NON_CHEAT.contains(key)) {
-      return State.IMMUTABLE;
-    }
-    return GameRulesStorage.getInstance(server).hasChanged(key) ? State.LOCKED : State.MUTABLE;
+  private static State getStateForHardcore(GameRules.Key<?> key) {
+    return HARDCORE_NON_CHEAT.contains(key) ? State.MUTABLE : State.IMMUTABLE;
   }
 
-  private static State getStateForTechnical(GameRules.Key<?> key, MinecraftServer server) {
+  private static State getStateForTechnical(GameRules.Key<?> key) {
     return TECHNICAL_NON_CHEAT.contains(key) ? State.MUTABLE : State.IMMUTABLE;
   }
 
@@ -134,7 +138,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, State state, D
   }
 
   public enum State {
-    MUTABLE(0), IMMUTABLE(1), LOCKED(2);
+    MUTABLE(0), IMMUTABLE(1), LOCKED(2), DENIED(3);
 
     public static final IntFunction<State> ID_TO_VALUE_FUNCTION = ValueLists.createIdToValueFunction(
         State::getId,

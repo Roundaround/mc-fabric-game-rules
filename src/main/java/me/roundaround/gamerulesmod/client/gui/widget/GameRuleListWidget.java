@@ -3,6 +3,8 @@ package me.roundaround.gamerulesmod.client.gui.widget;
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
+import me.roundaround.gamerulesmod.generated.Constants;
+import me.roundaround.gamerulesmod.generated.Variant;
 import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.NonPositioningLayoutWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.linear.LinearLayoutWidget;
@@ -22,11 +24,13 @@ import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 import net.minecraft.world.GameRules;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -35,13 +39,12 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleListWidget.Entry> implements AutoCloseable {
-  private static final DateTimeFormatter DATE_TIME_FORMATTER =
-      DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM);
-
   private static GameRules defaultRules = null;
 
+  private final Consumer<List<RuleInfo>> onRulesResponse;
   private final BiConsumer<Boolean, Boolean> onRuleChange;
 
   private CancelHandle cancelHandle;
@@ -50,9 +53,11 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
   public GameRuleListWidget(
       MinecraftClient client,
       ThreeSectionLayoutWidget layout,
+      Consumer<List<RuleInfo>> onRulesResponse,
       BiConsumer<Boolean, Boolean> onRuleChange
   ) {
     super(client, layout);
+    this.onRulesResponse = onRulesResponse;
     this.onRuleChange = onRuleChange;
   }
 
@@ -82,6 +87,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           } else {
             try {
               this.setRules(rules, showImmutable);
+              this.onRulesResponse.accept(rules);
             } catch (Exception e) {
               GameRulesMod.LOGGER.error("Exception thrown while populating rules list!", e);
               this.setError();
@@ -254,12 +260,15 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         Date changed,
         Runnable onChange
     ) {
+      String id = key.getName();
+      Either<Boolean, Integer> value = gameRules.gamerulesmod$getValue(id);
+
       return new RuleContext(
-          key.getName(),
-          getName(key),
-          getTooltip(key, state, changed),
+          id,
+          getDisplayName(key),
+          getTooltip(key, value, state, changed),
           getNarrationName(key),
-          gameRules.gamerulesmod$getValue(key.getName()),
+          value,
           state,
           onChange
       );
@@ -269,7 +278,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       return this.id;
     }
 
-    public Text getName() {
+    public Text getDisplayName() {
       return this.name;
     }
 
@@ -319,39 +328,29 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       this.onChange.run();
     }
 
-    private static <T extends GameRules.Rule<T>> Text getName(GameRules.Key<T> key) {
+    private static <T extends GameRules.Rule<T>> Text getDisplayName(GameRules.Key<T> key) {
       return Text.translatable(key.getTranslationKey());
     }
 
     private static <T extends GameRules.Rule<T>> List<Text> getTooltip(
         GameRules.Key<T> key,
+        Either<Boolean, Integer> currentValue,
         RuleInfo.State state,
         Date changed
     ) {
       ArrayList<Text> lines = new ArrayList<>();
+
       lines.add(Text.literal(key.getName()).formatted(Formatting.YELLOW));
       getDescription(key).ifPresent(lines::add);
-      lines.add(getDefaultLine(key));
-
-      Text formattedChanged = changed == null ?
-          Text.translatable("gamerulesmod.main.never").formatted(Formatting.GRAY) :
-          Text.literal(formatDate(changed)).formatted(Formatting.AQUA);
-      lines.add(Text.translatable("gamerulesmod.main.date", formattedChanged));
-
-      if (state.equals(RuleInfo.State.LOCKED)) {
-        lines.add(Text.translatable("gamerulesmod.main.locked").formatted(Formatting.GRAY, Formatting.ITALIC));
-      } else if (state.equals(RuleInfo.State.IMMUTABLE)) {
-        lines.add(Text.translatable("gamerulesmod.main.immutable").formatted(Formatting.GRAY, Formatting.ITALIC));
-      }
+      lines.add(getDefaultValueLine(key));
+      lines.add(getCurrentValueLine(key, currentValue));
+      lines.add(getChangedLine(changed));
+      getDisabledLine(state).ifPresent(lines::add);
 
       return lines;
     }
 
-    private static String formatDate(Date date) {
-      return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().format(DATE_TIME_FORMATTER);
-    }
-
-    private static <T extends GameRules.Rule<T>> Optional<Text> getDescription(GameRules.Key<T> key) {
+    private static Optional<Text> getDescription(GameRules.Key<?> key) {
       String descriptionI18nKey = key.getTranslationKey() + ".description";
       if (I18n.hasTranslation(descriptionI18nKey)) {
         return Optional.of(Text.translatable(descriptionI18nKey));
@@ -359,13 +358,70 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       return Optional.empty();
     }
 
-    private static <T extends GameRules.Rule<T>> Text getDefaultLine(GameRules.Key<T> key) {
+    private static Text getDefaultValueLine(GameRules.Key<?> key) {
       return Text.translatable("editGamerule.default", Text.literal(getDefaultRules().get(key).serialize()))
           .formatted(Formatting.GRAY);
     }
 
-    private static <T extends GameRules.Rule<T>> String getNarrationName(GameRules.Key<T> key) {
-      String defaultLine = getDefaultLine(key).getString();
+    private static Text getCurrentValueLine(GameRules.Key<?> key, Either<Boolean, Integer> currentValue) {
+      Either<Boolean, Integer> defaultValue = getDefaultRules().gamerulesmod$getValue(key.getName());
+      boolean differentFromDefault = !Objects.equals(defaultValue, currentValue);
+
+      MutableText value = Text.literal(currentValue.map(Object::toString, Object::toString));
+      if (differentFromDefault) {
+        value = value.formatted(Formatting.GREEN);
+      }
+
+      return Text.empty().formatted(Formatting.GRAY).append(Text.translatable("gamerulesmod.main.current", value));
+    }
+
+    private static Text getChangedLine(@Nullable Date changed) {
+      Text value = changed == null ?
+          Text.translatable("gamerulesmod.main.never").formatted(Formatting.ITALIC) :
+          Text.literal(formatDate(changed)).formatted(Formatting.AQUA);
+
+      return Text.empty().formatted(Formatting.GRAY).append(Text.translatable("gamerulesmod.main.date", value));
+    }
+
+    private static String formatDate(Date date) {
+      return date.toInstant()
+          .atZone(ZoneId.systemDefault())
+          .toLocalDateTime()
+          .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT));
+    }
+
+    private static Optional<Text> getDisabledLine(RuleInfo.State state) {
+      return Optional.ofNullable(switch (state) {
+            case IMMUTABLE -> Text.translatable("gamerulesmod.main.immutable.variant", formatActiveVariant());
+            case LOCKED -> Text.translatable(
+                "gamerulesmod.main.immutable.locked",
+                Text.translatable("selectWorld.gameMode.hardcore").formatted(Formatting.RED)
+            );
+            case DENIED -> Text.translatable("gamerulesmod.main.immutable.denied");
+            default -> null;
+          })
+          .map((text) -> Text.literal("\n")
+              .append(Text.translatable("gamerulesmod.main.immutable"))
+              .append("\n")
+              .append(text)
+              .formatted(Formatting.GRAY, Formatting.ITALIC));
+    }
+
+    private static Text formatActiveVariant() {
+      Variant variant = Constants.ACTIVE_VARIANT;
+      return Text.literal(variant.name()).formatted(getVariantColor(variant));
+    }
+
+    private static Formatting getVariantColor(Variant variant) {
+      return switch (variant) {
+        case BASE -> Formatting.WHITE;
+        case TECHNICAL -> Formatting.GOLD;
+        case HARDCORE -> Formatting.RED;
+      };
+    }
+
+    private static String getNarrationName(GameRules.Key<?> key) {
+      String defaultLine = getDefaultValueLine(key).getString();
       return getDescription(key).map((description) -> description.getString() + "\n" + defaultLine).orElse(defaultLine);
     }
   }
@@ -656,7 +712,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .defaultOffAxisContentAlignCenter();
 
       layout.add(
-          LabelWidget.builder(this.textRenderer, this.context.getName())
+          LabelWidget.builder(this.textRenderer, this.context.getDisplayName())
               .alignTextLeft()
               .alignTextCenterY()
               .overflowBehavior(LabelWidget.OverflowBehavior.WRAP)
@@ -716,7 +772,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
               .append("\n")
               .append(this.context.getNarrationName()))
           .build(
-              0, 0, 1, 1, this.context.getName(), (button, value) -> {
+              0, 0, 1, 1, this.context.getDisplayName(), (button, value) -> {
                 this.context.setValue(value);
                 this.context.markChanged();
               }
@@ -759,9 +815,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           this.textRenderer,
           CONTROL_MIN_WIDTH,
           20,
-          this.context.getName().copy().append(this.context.getNarrationName()).append("\n")
+          this.context.getDisplayName().copy().append(this.context.getNarrationName()).append("\n")
       );
       widget.setText(Integer.toString(IntRuleEntry.this.getIntValue()));
+      widget.setUneditableColor(10526880); // From PressableWidget
       widget.setChangedListener((value) -> {
         int previousValue = IntRuleEntry.this.getIntValue();
         boolean previousValid = this.context.isValid();
