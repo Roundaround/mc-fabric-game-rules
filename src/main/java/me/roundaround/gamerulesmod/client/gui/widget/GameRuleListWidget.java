@@ -401,10 +401,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
             default -> null;
           })
           .map((text) -> Text.literal("\n")
-              .append(Text.translatable("gamerulesmod.main.immutable"))
-              .append("\n")
-              .append(text)
-              .formatted(Formatting.GRAY, Formatting.ITALIC));
+              .formatted(Formatting.GRAY, Formatting.ITALIC)
+              .append(Text.translatable("gamerulesmod.main.immutable", text)));
     }
 
     private static Text formatActiveVariant() {

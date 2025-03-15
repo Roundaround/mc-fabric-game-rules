@@ -82,6 +82,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, State state, D
     ServerWorld world = player.getServerWorld();
 
     boolean isMultiplayer = !server.isSingleplayer();
+    boolean isDedicated = server.isDedicated();
     boolean hasOps = player.hasPermissionLevel(server.getOpPermissionLevel());
     boolean isHardcore = world.getLevelProperties().isHardcore();
 
@@ -90,7 +91,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, State state, D
     }
 
     State state = switch (Constants.ACTIVE_VARIANT) {
-      case Variant.HARDCORE -> isHardcore ? getStateForHardcore(key) : getStateForTechnical(key);
+      case Variant.HARDCORE -> isHardcore || isDedicated ? getStateForHardcore(key) : getStateForTechnical(key);
       case Variant.TECHNICAL -> getStateForTechnical(key);
       case Variant.BASE -> State.MUTABLE;
     };

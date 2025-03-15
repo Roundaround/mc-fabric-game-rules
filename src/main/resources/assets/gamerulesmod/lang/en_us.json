@@ -8,7 +8,7 @@
   "gamerulesmod.main.current": "Current: %s",
   "gamerulesmod.main.date": "Changed: %s",
   "gamerulesmod.main.never": "(never)",
-  "gamerulesmod.main.immutable": "Read-only:",
+  "gamerulesmod.main.immutable": "Read-only %s",
   "gamerulesmod.main.immutable.variant": "for variant \"%s\"",
   "gamerulesmod.main.immutable.locked": "(%s) rule already changed",
   "gamerulesmod.main.immutable.denied": "server OP required",
