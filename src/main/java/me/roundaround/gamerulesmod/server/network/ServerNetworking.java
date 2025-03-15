@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
+import me.roundaround.gamerulesmod.generated.Constants;
 import me.roundaround.gamerulesmod.network.Networking;
 import me.roundaround.gamerulesmod.server.gamerule.GameRulesStorage;
 import me.roundaround.gamerulesmod.server.gamerule.RuleInfoServerHelper;
@@ -27,7 +28,7 @@ public final class ServerNetworking {
   }
 
   public static void sendFetch(ServerPlayerEntity player, int reqId, List<RuleInfo> rules) {
-    ServerPlayNetworking.send(player, new Networking.FetchS2C(reqId, rules));
+    ServerPlayNetworking.send(player, new Networking.FetchS2C(reqId, Constants.ACTIVE_VARIANT, rules));
   }
 
   private static void handleFetch(Networking.FetchC2S payload, ServerPlayNetworking.Context context) {

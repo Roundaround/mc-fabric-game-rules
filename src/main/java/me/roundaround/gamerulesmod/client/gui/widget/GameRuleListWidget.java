@@ -5,7 +5,6 @@ import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
-import me.roundaround.gamerulesmod.generated.Constants;
 import me.roundaround.gamerulesmod.generated.Variant;
 import me.roundaround.gamerulesmod.network.Networking;
 import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
@@ -86,7 +85,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
             this.setError();
           } else {
             try {
-              this.setRules(payload.rules(), showImmutable);
+              this.setRules(payload.rules(), payload.activeVariant(), showImmutable);
               this.onRulesResponse.accept(payload.rules());
             } catch (Exception e) {
               GameRulesMod.LOGGER.error("Exception thrown while populating rules list!", e);
@@ -111,7 +110,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
   }
 
 
-  private void setRules(final List<RuleInfo> rules, final boolean showImmutable) {
+  private void setRules(final List<RuleInfo> rules, final Variant serverActiveVariant, final boolean showImmutable) {
     this.clearEntries();
 
     final TextRenderer textRenderer = this.client.textRenderer;
@@ -135,6 +134,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         if (showImmutable || !state.equals(RuleState.IMMUTABLE)) {
           this.addEntry(
               key, BooleanRuleEntry.factory(
+                  serverActiveVariant,
                   gameRules,
                   key,
                   state,
@@ -152,6 +152,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         if (showImmutable || !state.equals(RuleState.IMMUTABLE)) {
           this.addEntry(
               key, IntRuleEntry.factory(
+                  serverActiveVariant,
                   gameRules,
                   key,
                   state,
@@ -255,6 +256,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static <T extends GameRules.Rule<T>> RuleContext of(
+        Variant serverActiveVariant,
         GameRules gameRules,
         GameRules.Key<T> key,
         RuleState state,
@@ -267,7 +269,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       return new RuleContext(
           id,
           getDisplayName(key),
-          getTooltip(key, value, state, changed),
+          getTooltip(serverActiveVariant, key, value, state, changed),
           getNarrationName(key),
           value,
           state,
@@ -334,6 +336,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     private static <T extends GameRules.Rule<T>> List<Text> getTooltip(
+        Variant serverActiveVariant,
         GameRules.Key<T> key,
         Either<Boolean, Integer> currentValue,
         RuleState state,
@@ -346,7 +349,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       lines.add(getDefaultValueLine(key));
       lines.add(getCurrentValueLine(key, currentValue));
       lines.add(getChangedLine(changed));
-      getDisabledLine(state).ifPresent(lines::add);
+      getDisabledLine(state, serverActiveVariant).ifPresent(lines::add);
 
       return lines;
     }
@@ -391,9 +394,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT));
     }
 
-    private static Optional<Text> getDisabledLine(RuleState state) {
+    private static Optional<Text> getDisabledLine(RuleState state, Variant serverActiveVariant) {
       return Optional.ofNullable(switch (state) {
-            case IMMUTABLE -> Text.translatable("gamerulesmod.main.immutable.variant", formatActiveVariant());
+            case IMMUTABLE ->
+                Text.translatable("gamerulesmod.main.immutable.variant", formatActiveVariant(serverActiveVariant));
             case LOCKED -> Text.translatable(
                 "gamerulesmod.main.immutable.locked",
                 Text.translatable("selectWorld.gameMode.hardcore").formatted(Formatting.RED)
@@ -406,8 +410,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
               .append(Text.translatable("gamerulesmod.main.immutable", text)));
     }
 
-    private static Text formatActiveVariant() {
-      Variant variant = Constants.ACTIVE_VARIANT;
+    private static Text formatActiveVariant(Variant variant) {
       return Text.literal(variant.name()).formatted(getVariantColor(variant));
     }
 
@@ -781,6 +784,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static FlowListWidget.EntryFactory<BooleanRuleEntry> factory(
+        Variant serverActiveVariant,
         GameRules gameRules,
         GameRules.Key<GameRules.BooleanRule> key,
         RuleState state,
@@ -789,7 +793,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new BooleanRuleEntry(
-          RuleContext.of(gameRules, key, state, changed, onChange),
+          RuleContext.of(serverActiveVariant, gameRules, key, state, changed, onChange),
           textRenderer,
           index,
           left,
@@ -841,6 +845,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static FlowListWidget.EntryFactory<IntRuleEntry> factory(
+        Variant serverActiveVariant,
         GameRules gameRules,
         GameRules.Key<GameRules.IntRule> key,
         RuleState state,
@@ -849,7 +854,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new IntRuleEntry(
-          RuleContext.of(gameRules, key, state, changed, onChange),
+          RuleContext.of(serverActiveVariant, gameRules, key, state, changed, onChange),
           textRenderer,
           index,
           left,
