@@ -3,11 +3,11 @@ package me.roundaround.gamerulesmod.client.gui.widget;
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
-import me.roundaround.gamerulesmod.common.future.CancelHandle;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.generated.Constants;
 import me.roundaround.gamerulesmod.generated.Variant;
+import me.roundaround.gamerulesmod.network.Networking;
 import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.NonPositioningLayoutWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.linear.LinearLayoutWidget;
@@ -17,6 +17,7 @@ import me.roundaround.gamerulesmod.roundalib.client.gui.widget.IconButtonWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.widget.ParentElementEntryListWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.widget.TooltipWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.widget.drawable.LabelWidget;
+import me.roundaround.gamerulesmod.roundalib.network.request.ServerRequest;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -37,7 +38,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -48,7 +48,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
   private final Consumer<List<RuleInfo>> onRulesResponse;
   private final BiConsumer<Boolean, Boolean> onRuleChange;
 
-  private CancelHandle cancelHandle;
+  private ServerRequest<Networking.FetchS2C> pendingRequest;
   private boolean showImmutable = false;
 
   public GameRuleListWidget(
@@ -78,17 +78,16 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.addEntry(LoadingEntry.factory(this.client.textRenderer));
     this.refreshPositions();
 
-    CompletableFuture<List<RuleInfo>> future = ClientNetworking.sendFetch(showImmutable);
-    this.cancelHandle = CancelHandle.of(future);
+    ServerRequest<Networking.FetchS2C> pendingRequest = ClientNetworking.sendFetch(showImmutable);
 
-    future.orTimeout(30, TimeUnit.SECONDS).whenCompleteAsync(
-        (rules, throwable) -> {
+    pendingRequest.getFuture().orTimeout(30, TimeUnit.SECONDS).whenCompleteAsync(
+        (payload, throwable) -> {
           if (throwable != null) {
             this.setError();
           } else {
             try {
-              this.setRules(rules, showImmutable);
-              this.onRulesResponse.accept(rules);
+              this.setRules(payload.rules(), showImmutable);
+              this.onRulesResponse.accept(payload.rules());
             } catch (Exception e) {
               GameRulesMod.LOGGER.error("Exception thrown while populating rules list!", e);
               this.setError();
@@ -99,9 +98,9 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
   }
 
   private void cancel() {
-    if (this.cancelHandle != null) {
-      this.cancelHandle.cancel();
-      this.cancelHandle = null;
+    if (this.pendingRequest != null) {
+      this.pendingRequest.cancel();
+      this.pendingRequest = null;
     }
   }
 
