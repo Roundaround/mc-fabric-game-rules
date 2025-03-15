@@ -20,8 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 
 public class GameRuleScreen extends Screen {
-  private static final int BUTTON_WIDTH = ButtonWidget.DEFAULT_WIDTH_SMALL;
-
   private final ThreeSectionLayoutWidget layout = new ThreeSectionLayoutWidget(this);
   private final HashMap<String, Either<Boolean, Integer>> dirtyValues = new HashMap<>();
   private final Screen parent;
@@ -47,7 +45,8 @@ public class GameRuleScreen extends Screen {
         this::onRuleChange
     ));
 
-    this.layout.setHeaderHeight(this.layout.getHeaderHeight() + 2 * GuiUtil.PADDING);
+    this.layout.setHeaderHeight(48);
+    this.layout.getHeader().spacing(GuiUtil.PADDING);
     this.layout.addHeader(this.textRenderer, this.title);
 
     this.checkbox = this.layout.addHeader(CheckboxWidget.builder(
@@ -70,11 +69,9 @@ public class GameRuleScreen extends Screen {
               this.generateConfirmText()
           ));
         }
-    ).width(BUTTON_WIDTH).build());
+    ).build());
 
-    this.layout.addFooter(ButtonWidget.builder(ScreenTexts.CANCEL, (button) -> this.close())
-        .width(BUTTON_WIDTH)
-        .build());
+    this.layout.addFooter(ButtonWidget.builder(ScreenTexts.CANCEL, (button) -> this.close()).build());
 
     this.layout.forEachChild(this::addDrawableChild);
     this.initTabNavigation();

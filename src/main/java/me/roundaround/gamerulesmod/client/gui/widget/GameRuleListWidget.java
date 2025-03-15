@@ -59,6 +59,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     super(client, layout);
     this.onRulesResponse = onRulesResponse;
     this.onRuleChange = onRuleChange;
+
+    this.setContentPaddingY(GuiUtil.PADDING / 2);
   }
 
   public void setShowImmutable(boolean showImmutable) {
