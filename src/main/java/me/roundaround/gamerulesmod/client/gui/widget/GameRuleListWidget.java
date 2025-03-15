@@ -198,12 +198,12 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.onRuleChange.accept(allValid, anyDirty);
   }
 
-  public Map<String, Either<Boolean, Integer>> getDirtyValues() {
-    HashMap<String, Either<Boolean, Integer>> values = new HashMap<>();
+  public LinkedHashMap<String, Either<Boolean, Integer>> getDirtyValues() {
+    LinkedHashMap<String, Either<Boolean, Integer>> values = new LinkedHashMap<>();
     for (Entry entry : this.entries) {
       if (entry instanceof RuleEntry ruleEntry) {
         if (!ruleEntry.isValid()) {
-          return Map.of();
+          return new LinkedHashMap<>();
         }
         if (ruleEntry.isDirty()) {
           values.put(ruleEntry.getId(), ruleEntry.getValue());

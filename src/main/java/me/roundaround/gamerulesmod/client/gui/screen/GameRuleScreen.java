@@ -15,13 +15,16 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
-import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GameRuleScreen extends Screen {
   private final ThreeSectionLayoutWidget layout = new ThreeSectionLayoutWidget(this);
-  private final HashMap<String, Either<Boolean, Integer>> dirtyValues = new HashMap<>();
+  private final LinkedHashMap<String, Either<Boolean, Integer>> dirtyValues = new LinkedHashMap<>();
   private final Screen parent;
 
   private CheckboxWidget checkbox;
@@ -132,10 +135,23 @@ public class GameRuleScreen extends Screen {
     }
 
     text.append(Text.translatable("gamerulesmod.confirm.summary")).append("\n");
-    this.dirtyValues.forEach((id, value) -> text.append(id)
+
+    LinkedHashMap<String, Either<Boolean, Integer>> dirtyValues = new LinkedHashMap<>();
+    Iterator<Map.Entry<String, Either<Boolean, Integer>>> iterator = this.dirtyValues.entrySet().iterator();
+    for (int i = 0; i < 5 && iterator.hasNext(); i++) {
+      Map.Entry<String, Either<Boolean, Integer>> entry = iterator.next();
+      dirtyValues.put(entry.getKey(), entry.getValue());
+    }
+
+    dirtyValues.forEach((id, value) -> text.append(Text.literal(id).formatted(Formatting.BOLD))
         .append(": ")
-        .append(value.map(Object::toString, Object::toString))
+        .append(Text.literal(value.map(Object::toString, Object::toString)).formatted(Formatting.LIGHT_PURPLE))
         .append("\n"));
+
+    int additional = this.dirtyValues.size() - dirtyValues.size();
+    if (additional > 0) {
+      text.append(Text.translatable("gamerulesmod.confirm.more", additional)).append("\n");
+    }
 
     return text;
   }
