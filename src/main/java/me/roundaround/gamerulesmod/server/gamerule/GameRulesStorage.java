@@ -1,8 +1,8 @@
-package me.roundaround.gamerulesmod.server;
+package me.roundaround.gamerulesmod.server.gamerule;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
-import me.roundaround.gamerulesmod.util.GameRuleHistory;
+import me.roundaround.gamerulesmod.common.gamerule.RuleHistory;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -17,7 +17,7 @@ import java.util.Date;
 import java.util.HashMap;
 
 public class GameRulesStorage extends PersistentState {
-  private final HashMap<String, GameRuleHistory> history = new HashMap<>();
+  private final HashMap<String, RuleHistory> history = new HashMap<>();
 
   private GameRulesStorage() {
   }
@@ -83,7 +83,7 @@ public class GameRulesStorage extends PersistentState {
   }
 
   public void recordChange(String id, Either<Boolean, Integer> previousValue) {
-    this.history.computeIfAbsent(id, (key) -> GameRuleHistory.create(previousValue)).recordChange(previousValue);
+    this.history.computeIfAbsent(id, (key) -> RuleHistory.create(previousValue)).recordChange(previousValue);
     this.markDirty();
   }
 
@@ -106,7 +106,7 @@ public class GameRulesStorage extends PersistentState {
     for (NbtElement elementNbt : historyNbt) {
       NbtCompound entryNbt = (NbtCompound) elementNbt;
       String id = entryNbt.getString("Key");
-      storage.history.put(id, GameRuleHistory.fromNbt(entryNbt));
+      storage.history.put(id, RuleHistory.fromNbt(entryNbt));
     }
 
     return storage;

@@ -2,8 +2,8 @@ package me.roundaround.gamerulesmod.client.network;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.network.Networking;
-import me.roundaround.gamerulesmod.util.CancellableFuture;
-import me.roundaround.gamerulesmod.util.RuleInfo;
+import me.roundaround.gamerulesmod.common.future.CancellableFuture;
+import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 

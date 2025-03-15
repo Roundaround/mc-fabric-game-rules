@@ -1,4 +1,4 @@
-package me.roundaround.gamerulesmod.util;
+package me.roundaround.gamerulesmod.common.gamerule;
 
 import com.mojang.datafixers.util.Either;
 import net.minecraft.nbt.AbstractNbtNumber;
@@ -10,7 +10,7 @@ import net.minecraft.world.GameRules.Category;
 import net.minecraft.world.GameRules.IntRule;
 import net.minecraft.world.GameRules.Key;
 
-public final class Util {
+public final class RuleHelper {
   public static Key<?> createRuleKey(String id) {
     return new Key<>(id, Category.PLAYER);
   }
@@ -34,6 +34,6 @@ public final class Util {
     return Either.right(((AbstractNbtNumber) nbt).intValue());
   }
 
-  private Util() {
+  private RuleHelper() {
   }
 }

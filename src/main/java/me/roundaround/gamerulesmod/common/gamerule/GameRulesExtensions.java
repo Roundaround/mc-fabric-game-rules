@@ -1,4 +1,4 @@
-package me.roundaround.gamerulesmod.util;
+package me.roundaround.gamerulesmod.common.gamerule;
 
 import com.mojang.datafixers.util.Either;
 import net.minecraft.server.MinecraftServer;

@@ -3,6 +3,9 @@ package me.roundaround.gamerulesmod.client.gui.widget;
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
+import me.roundaround.gamerulesmod.common.future.CancelHandle;
+import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
+import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.generated.Constants;
 import me.roundaround.gamerulesmod.generated.Variant;
 import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
@@ -14,8 +17,6 @@ import me.roundaround.gamerulesmod.roundalib.client.gui.widget.IconButtonWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.widget.ParentElementEntryListWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.widget.TooltipWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.widget.drawable.LabelWidget;
-import me.roundaround.gamerulesmod.util.CancelHandle;
-import me.roundaround.gamerulesmod.util.RuleInfo;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -110,17 +111,18 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.refreshPositions();
   }
 
+
   private void setRules(final List<RuleInfo> rules, final boolean showImmutable) {
     this.clearEntries();
 
     final TextRenderer textRenderer = this.client.textRenderer;
 
     final GameRules gameRules = new GameRules();
-    final HashMap<String, RuleInfo.State> stateMap = new HashMap<>();
+    final HashMap<String, RuleState> stateMap = new HashMap<>();
     final HashMap<String, Date> changedMap = new HashMap<>();
 
     rules.forEach((ruleInfo) -> {
-      ruleInfo.applyValue(gameRules);
+      gameRules.gamerulesmod$set(ruleInfo.id(), ruleInfo.value());
       stateMap.put(ruleInfo.id(), ruleInfo.state());
       changedMap.put(ruleInfo.id(), ruleInfo.changed());
     });
@@ -130,8 +132,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     GameRules.accept(new GameRules.Visitor() {
       @Override
       public void visitBoolean(GameRules.Key<GameRules.BooleanRule> key, GameRules.Type<GameRules.BooleanRule> type) {
-        RuleInfo.State state = stateMap.getOrDefault(key.getName(), RuleInfo.State.IMMUTABLE);
-        if (showImmutable || !state.equals(RuleInfo.State.IMMUTABLE)) {
+        RuleState state = stateMap.getOrDefault(key.getName(), RuleState.IMMUTABLE);
+        if (showImmutable || !state.equals(RuleState.IMMUTABLE)) {
           this.addEntry(
               key, BooleanRuleEntry.factory(
                   gameRules,
@@ -147,8 +149,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
       @Override
       public void visitInt(GameRules.Key<GameRules.IntRule> key, GameRules.Type<GameRules.IntRule> type) {
-        RuleInfo.State state = stateMap.getOrDefault(key.getName(), RuleInfo.State.IMMUTABLE);
-        if (showImmutable || !state.equals(RuleInfo.State.IMMUTABLE)) {
+        RuleState state = stateMap.getOrDefault(key.getName(), RuleState.IMMUTABLE);
+        if (showImmutable || !state.equals(RuleState.IMMUTABLE)) {
           this.addEntry(
               key, IntRuleEntry.factory(
                   gameRules,
@@ -227,7 +229,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     private final List<Text> tooltip;
     private final String narrationName;
     private final Either<Boolean, Integer> initialValue;
-    private final RuleInfo.State state;
+    private final RuleState state;
     private final Runnable onChange;
 
     private Either<Boolean, Integer> value;
@@ -239,7 +241,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         List<Text> tooltip,
         String narrationName,
         Either<Boolean, Integer> initialValue,
-        RuleInfo.State state,
+        RuleState state,
         Runnable onChange
     ) {
       this.id = id;
@@ -256,7 +258,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public static <T extends GameRules.Rule<T>> RuleContext of(
         GameRules gameRules,
         GameRules.Key<T> key,
-        RuleInfo.State state,
+        RuleState state,
         Date changed,
         Runnable onChange
     ) {
@@ -321,7 +323,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public boolean isMutable() {
-      return this.state.equals(RuleInfo.State.MUTABLE);
+      return this.state.equals(RuleState.MUTABLE);
     }
 
     public void markChanged() {
@@ -335,7 +337,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     private static <T extends GameRules.Rule<T>> List<Text> getTooltip(
         GameRules.Key<T> key,
         Either<Boolean, Integer> currentValue,
-        RuleInfo.State state,
+        RuleState state,
         Date changed
     ) {
       ArrayList<Text> lines = new ArrayList<>();
@@ -390,7 +392,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT));
     }
 
-    private static Optional<Text> getDisabledLine(RuleInfo.State state) {
+    private static Optional<Text> getDisabledLine(RuleState state) {
       return Optional.ofNullable(switch (state) {
             case IMMUTABLE -> Text.translatable("gamerulesmod.main.immutable.variant", formatActiveVariant());
             case LOCKED -> Text.translatable(
@@ -782,7 +784,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public static FlowListWidget.EntryFactory<BooleanRuleEntry> factory(
         GameRules gameRules,
         GameRules.Key<GameRules.BooleanRule> key,
-        RuleInfo.State state,
+        RuleState state,
         Date changed,
         Runnable onChange,
         TextRenderer textRenderer
@@ -842,7 +844,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public static FlowListWidget.EntryFactory<IntRuleEntry> factory(
         GameRules gameRules,
         GameRules.Key<GameRules.IntRule> key,
-        RuleInfo.State state,
+        RuleState state,
         Date changed,
         Runnable onChange,
         TextRenderer textRenderer

@@ -2,8 +2,8 @@ package me.roundaround.gamerulesmod.network;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
+import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.roundalib.network.CustomCodecs;
-import me.roundaround.gamerulesmod.util.RuleInfo;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;

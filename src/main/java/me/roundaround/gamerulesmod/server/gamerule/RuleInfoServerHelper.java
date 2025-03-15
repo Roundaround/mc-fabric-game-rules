@@ -1,17 +1,13 @@
-package me.roundaround.gamerulesmod.util;
+package me.roundaround.gamerulesmod.server.gamerule;
 
 import com.mojang.datafixers.util.Either;
-import io.netty.buffer.ByteBuf;
+import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
+import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.generated.Constants;
 import me.roundaround.gamerulesmod.generated.Variant;
-import me.roundaround.gamerulesmod.roundalib.network.CustomCodecs;
-import me.roundaround.gamerulesmod.server.GameRulesStorage;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.function.ValueLists;
 import net.minecraft.world.GameRules;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,22 +15,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import java.util.function.IntFunction;
 import java.util.function.Predicate;
 
-public record RuleInfo(String id, Either<Boolean, Integer> value, State state, Date changed) {
-  public static final PacketCodec<ByteBuf, RuleInfo> PACKET_CODEC = PacketCodec.tuple(
-      PacketCodecs.STRING,
-      RuleInfo::id,
-      PacketCodecs.either(PacketCodecs.BOOL, PacketCodecs.INTEGER),
-      RuleInfo::value,
-      State.PACKET_CODEC,
-      RuleInfo::state,
-      CustomCodecs.nullable(CustomCodecs.DATE),
-      RuleInfo::changed,
-      RuleInfo::new
-  );
-
+public final class RuleInfoServerHelper {
   private static final Set<GameRules.Key<?>> TECHNICAL_NON_CHEAT = Set.of(
       GameRules.ANNOUNCE_ADVANCEMENTS,
       GameRules.COMMAND_BLOCK_OUTPUT,
@@ -63,62 +46,47 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, State state, D
       GameRules.SPAWN_CHUNK_RADIUS
   );
 
-  public static RuleInfo of(GameRules gameRules, GameRules.Key<?> key, ServerPlayerEntity player) {
+  public static RuleInfo createInfo(GameRules gameRules, GameRules.Key<?> key, ServerPlayerEntity player) {
     String id = key.getName();
     Either<Boolean, Integer> value = gameRules.gamerulesmod$getValue(id);
     if (player == null) {
-      return new RuleInfo(id, value, State.IMMUTABLE, null);
+      return new RuleInfo(id, value, RuleState.IMMUTABLE, null);
     }
 
     return new RuleInfo(id, value, getState(key, player), getChangedDate(key, player));
   }
 
-  public void applyValue(GameRules gameRules) {
-    gameRules.gamerulesmod$set(this.id(), this.value());
-  }
-
-  public static State getState(GameRules.Key<?> key, ServerPlayerEntity player) {
+  public static RuleState getState(GameRules.Key<?> key, ServerPlayerEntity player) {
     MinecraftServer server = player.server;
     ServerWorld world = player.getServerWorld();
 
     boolean isMultiplayer = !server.isSingleplayer();
-    boolean isDedicated = server.isDedicated();
+    boolean areCheatsEnabled = server.getPlayerManager().areCheatsAllowed();
     boolean hasOps = player.hasPermissionLevel(server.getOpPermissionLevel());
     boolean isHardcore = world.getLevelProperties().isHardcore();
 
     if (isMultiplayer && !hasOps) {
-      return State.DENIED;
+      return RuleState.DENIED;
     }
 
-    State state = switch (Constants.ACTIVE_VARIANT) {
-      case Variant.HARDCORE -> isHardcore || isDedicated ? getStateForHardcore(key) : getStateForTechnical(key);
+    RuleState state = switch (Constants.ACTIVE_VARIANT) {
+      case Variant.HARDCORE ->
+          isHardcore || (isMultiplayer && areCheatsEnabled) ? getStateForHardcore(key) : getStateForTechnical(key);
       case Variant.TECHNICAL -> getStateForTechnical(key);
-      case Variant.BASE -> State.MUTABLE;
+      case Variant.BASE -> RuleState.MUTABLE;
     };
 
-    if (isHardcore && state.equals(State.MUTABLE)) {
-      state = GameRulesStorage.getInstance(server).hasChanged(key) ? State.LOCKED : state;
+    if (isHardcore && state.equals(RuleState.MUTABLE)) {
+      state = GameRulesStorage.getInstance(server).hasChanged(key) ? RuleState.LOCKED : state;
     }
 
     return state;
   }
 
-  private static State getStateForHardcore(GameRules.Key<?> key) {
-    return HARDCORE_NON_CHEAT.contains(key) ? State.MUTABLE : State.IMMUTABLE;
-  }
-
-  private static State getStateForTechnical(GameRules.Key<?> key) {
-    return TECHNICAL_NON_CHEAT.contains(key) ? State.MUTABLE : State.IMMUTABLE;
-  }
-
-  private static Date getChangedDate(GameRules.Key<?> key, ServerPlayerEntity player) {
-    return GameRulesStorage.getInstance(player.server).getLastChangeDate(key);
-  }
-
   public static List<RuleInfo> collect(
       final GameRules gameRules,
       final ServerPlayerEntity player,
-      @Nullable final Predicate<State> stateFilter
+      @Nullable final Predicate<RuleState> stateFilter
   ) {
     final ArrayList<RuleInfo> ruleInfos = new ArrayList<>();
     GameRules.accept(new GameRules.Visitor() {
@@ -129,7 +97,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, State state, D
           return;
         }
 
-        RuleInfo ruleInfo = RuleInfo.of(gameRules, key, player);
+        RuleInfo ruleInfo = createInfo(gameRules, key, player);
         if (stateFilter == null || stateFilter.test(ruleInfo.state())) {
           ruleInfos.add(ruleInfo);
         }
@@ -138,27 +106,18 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, State state, D
     return ruleInfos;
   }
 
-  public enum State {
-    MUTABLE(0), IMMUTABLE(1), LOCKED(2), DENIED(3);
+  private static RuleState getStateForHardcore(GameRules.Key<?> key) {
+    return HARDCORE_NON_CHEAT.contains(key) ? RuleState.MUTABLE : RuleState.IMMUTABLE;
+  }
 
-    public static final IntFunction<State> ID_TO_VALUE_FUNCTION = ValueLists.createIdToValueFunction(
-        State::getId,
-        values(),
-        ValueLists.OutOfBoundsHandling.WRAP
-    );
-    public static final PacketCodec<ByteBuf, State> PACKET_CODEC = PacketCodecs.indexed(
-        ID_TO_VALUE_FUNCTION,
-        State::getId
-    );
+  private static RuleState getStateForTechnical(GameRules.Key<?> key) {
+    return TECHNICAL_NON_CHEAT.contains(key) ? RuleState.MUTABLE : RuleState.IMMUTABLE;
+  }
 
-    private final int id;
+  private static Date getChangedDate(GameRules.Key<?> key, ServerPlayerEntity player) {
+    return GameRulesStorage.getInstance(player.server).getLastChangeDate(key);
+  }
 
-    State(int id) {
-      this.id = id;
-    }
-
-    public int getId() {
-      return this.id;
-    }
+  private RuleInfoServerHelper() {
   }
 }

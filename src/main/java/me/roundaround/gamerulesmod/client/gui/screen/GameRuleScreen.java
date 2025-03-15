@@ -3,9 +3,10 @@ package me.roundaround.gamerulesmod.client.gui.screen;
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.client.gui.widget.GameRuleListWidget;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
+import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
+import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.roundalib.client.gui.GuiUtil;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.screen.ThreeSectionLayoutWidget;
-import me.roundaround.gamerulesmod.util.RuleInfo;
 import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -39,7 +40,12 @@ public class GameRuleScreen extends Screen {
     assert this.client != null;
     assert this.client.world != null;
 
-    this.list = this.layout.addBody(new GameRuleListWidget(this.client, this.layout, this::onRulesResponse, this::onRuleChange));
+    this.list = this.layout.addBody(new GameRuleListWidget(
+        this.client,
+        this.layout,
+        this::onRulesResponse,
+        this::onRuleChange
+    ));
 
     this.layout.setHeaderHeight(this.layout.getHeaderHeight() + 2 * GuiUtil.PADDING);
     this.layout.addHeader(this.textRenderer, this.title);
@@ -96,7 +102,7 @@ public class GameRuleScreen extends Screen {
       return;
     }
 
-    long mutable = rules.stream().filter((rule) -> rule.state().equals(RuleInfo.State.MUTABLE)).count();
+    long mutable = rules.stream().filter((rule) -> rule.state().equals(RuleState.MUTABLE)).count();
     this.checkbox.active = mutable < this.client.world.getGameRules().gamerulesmod$size();
   }
 

@@ -2,9 +2,11 @@ package me.roundaround.gamerulesmod.server.network;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
+import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
+import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.network.Networking;
-import me.roundaround.gamerulesmod.server.GameRulesStorage;
-import me.roundaround.gamerulesmod.util.RuleInfo;
+import me.roundaround.gamerulesmod.server.gamerule.GameRulesStorage;
+import me.roundaround.gamerulesmod.server.gamerule.RuleInfoServerHelper;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -38,10 +40,12 @@ public final class ServerNetworking {
       }
 
       sendFetch(
-          player, payload.reqId(), RuleInfo.collect(
+          player,
+          payload.reqId(),
+          RuleInfoServerHelper.collect(
               world.getGameRules(),
               player,
-              (state) -> payload.includeImmutable() || !state.equals(RuleInfo.State.IMMUTABLE)
+              (state) -> payload.includeImmutable() || !state.equals(RuleState.IMMUTABLE)
           )
       );
     });
@@ -57,10 +61,10 @@ public final class ServerNetworking {
       }
 
       final GameRules gameRules = world.getGameRules();
-      final Set<String> mutableRules = RuleInfo.collect(
+      final Set<String> mutableRules = RuleInfoServerHelper.collect(
               gameRules,
               player,
-              (state) -> state.equals(RuleInfo.State.MUTABLE)
+              (state) -> state.equals(RuleState.MUTABLE)
           )
           .stream()
           .map(RuleInfo::id)

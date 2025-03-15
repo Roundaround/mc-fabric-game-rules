@@ -1,4 +1,4 @@
-package me.roundaround.gamerulesmod.util;
+package me.roundaround.gamerulesmod.common.future;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
