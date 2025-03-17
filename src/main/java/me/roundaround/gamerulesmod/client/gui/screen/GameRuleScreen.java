@@ -16,6 +16,7 @@ import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.world.GameRules;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -77,13 +78,13 @@ public class GameRuleScreen extends Screen {
     this.layout.addFooter(ButtonWidget.builder(ScreenTexts.CANCEL, (button) -> this.close()).build());
 
     this.layout.forEachChild(this::addDrawableChild);
-    this.initTabNavigation();
+    this.refreshWidgetPositions();
 
     this.list.fetch();
   }
 
   @Override
-  protected void initTabNavigation() {
+  protected void refreshWidgetPositions() {
     this.layout.refreshPositions();
   }
 
@@ -103,7 +104,7 @@ public class GameRuleScreen extends Screen {
     }
 
     long mutable = rules.stream().filter((rule) -> rule.state().equals(RuleState.MUTABLE)).count();
-    this.checkbox.active = mutable < this.client.world.getGameRules().gamerulesmod$size();
+    this.checkbox.active = mutable < new GameRules(this.client.world.getEnabledFeatures()).gamerulesmod$size();
   }
 
   private void onRuleChange(boolean allValid, boolean anyDirty) {

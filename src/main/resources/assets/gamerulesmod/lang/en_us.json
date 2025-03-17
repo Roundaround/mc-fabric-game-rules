@@ -17,6 +17,11 @@
   "gamerulesmod.confirm.summary": "Changes made:",
   "gamerulesmod.confirm.more": "(and %s more)",
   "gamerulesmod.confirm.save": "Save",
+  "gamerulesmod.unavailable.title": "Unable to Edit Game Rules",
+  "gamerulesmod.unavailable.notInWorld.1": "Game rules can only be modified when connected to a world.",
+  "gamerulesmod.unavailable.notInWorld.2": "Please join a world to use the mod!",
+  "gamerulesmod.unavailable.missingOnServer.1": "The Game Rules mod is required on the server.",
+  "gamerulesmod.unavailable.missingOnServer.2": "Please install it server-side in order to use the mod!",
   "gamerulesmod.key.openEditScreen": "Open Game Rules Edit Screen",
   "gamerulesmod.key.category": "Game Rules Mod"
 }

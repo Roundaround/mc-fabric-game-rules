@@ -2,6 +2,7 @@ package me.roundaround.gamerulesmod.client.gui.widget;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
+import me.roundaround.gamerulesmod.client.ClientUtil;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
@@ -117,7 +118,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     final TextRenderer textRenderer = this.client.textRenderer;
 
-    final GameRules gameRules = new GameRules();
+    final GameRules gameRules = ClientUtil.getDefaultRules();
     final HashMap<String, RuleState> stateMap = new HashMap<>();
     final HashMap<String, Date> changedMap = new HashMap<>();
 
@@ -129,7 +130,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     final HashMap<GameRules.Category, HashMap<GameRules.Key<?>, FlowListWidget.EntryFactory<? extends RuleEntry>>> ruleEntries = new HashMap<>();
 
-    GameRules.accept(new GameRules.Visitor() {
+    gameRules.accept(new GameRules.Visitor() {
       @Override
       public void visitBoolean(GameRules.Key<GameRules.BooleanRule> key, GameRules.Type<GameRules.BooleanRule> type) {
         RuleState state = stateMap.getOrDefault(key.getName(), RuleState.IMMUTABLE);
@@ -220,7 +221,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
   private static GameRules getDefaultRules() {
     if (defaultRules == null) {
-      defaultRules = new GameRules();
+      defaultRules = ClientUtil.getDefaultRules();
     }
     return defaultRules;
   }

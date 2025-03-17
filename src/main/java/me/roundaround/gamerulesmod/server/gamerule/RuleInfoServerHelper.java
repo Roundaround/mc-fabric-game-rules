@@ -62,7 +62,7 @@ public final class RuleInfoServerHelper {
       @Nullable final Predicate<RuleState> stateFilter
   ) {
     final ArrayList<RuleInfo> ruleInfos = new ArrayList<>();
-    GameRules.accept(new GameRules.Visitor() {
+    gameRules.accept(new GameRules.Visitor() {
       @Override
       public <T extends GameRules.Rule<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type) {
         if (!(gameRules.get(key) instanceof GameRules.BooleanRule) &&
