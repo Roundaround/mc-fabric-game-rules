@@ -56,33 +56,6 @@ public final class RuleInfoServerHelper {
     return new RuleInfo(id, value, getState(key, player), getChangedDate(key, player));
   }
 
-  public static RuleState getState(GameRules.Key<?> key, ServerPlayerEntity player) {
-    MinecraftServer server = player.server;
-    ServerWorld world = player.getServerWorld();
-
-    boolean isMultiplayer = !server.isSingleplayer();
-    boolean areCheatsEnabled = server.getPlayerManager().areCheatsAllowed();
-    boolean hasOps = player.hasPermissionLevel(server.getOpPermissionLevel());
-    boolean isHardcore = world.getLevelProperties().isHardcore();
-
-    if (isMultiplayer && !hasOps) {
-      return RuleState.DENIED;
-    }
-
-    RuleState state = switch (Constants.ACTIVE_VARIANT) {
-      case Variant.HARDCORE ->
-          isHardcore || (isMultiplayer && areCheatsEnabled) ? getStateForHardcore(key) : getStateForTechnical(key);
-      case Variant.TECHNICAL -> getStateForTechnical(key);
-      case Variant.BASE -> RuleState.MUTABLE;
-    };
-
-    if (isHardcore && state.equals(RuleState.MUTABLE)) {
-      state = GameRulesStorage.getInstance(server).hasChanged(key) ? RuleState.LOCKED : state;
-    }
-
-    return state;
-  }
-
   public static List<RuleInfo> collect(
       final GameRules gameRules,
       final ServerPlayerEntity player,
@@ -104,6 +77,49 @@ public final class RuleInfoServerHelper {
       }
     });
     return ruleInfos;
+  }
+
+  private static RuleState getState(GameRules.Key<?> key, ServerPlayerEntity player) {
+    MinecraftServer server = player.server;
+    ServerWorld world = player.getServerWorld();
+
+    if (!server.isSingleplayer()) {
+      return getStateForMultiplayer(key, server, player);
+    } else if (world.getLevelProperties().isHardcore()) {
+      return getStateForSingleplayerHardcoreWorld(key, server);
+    }
+
+    Variant variant = Constants.ACTIVE_VARIANT;
+    if (server.getPlayerManager().areCheatsAllowed()) {
+      variant = variant.equals(Variant.HARDCORE) ? Variant.TECHNICAL : Variant.BASE;
+    }
+    return getBaseStateForVariant(key, variant);
+  }
+
+  private static RuleState getStateForSingleplayerHardcoreWorld(GameRules.Key<?> key, MinecraftServer server) {
+    RuleState state = getBaseStateForVariant(key, Constants.ACTIVE_VARIANT);
+    return state.equals(RuleState.MUTABLE) && GameRulesStorage.getInstance(server).hasChanged(key) ?
+        RuleState.LOCKED :
+        state;
+  }
+
+  private static RuleState getStateForMultiplayer(
+      GameRules.Key<?> key,
+      MinecraftServer server,
+      ServerPlayerEntity player
+  ) {
+    if (!player.hasPermissionLevel(server.getOpPermissionLevel())) {
+      return RuleState.DENIED;
+    }
+    return getBaseStateForVariant(key, Constants.ACTIVE_VARIANT);
+  }
+
+  private static RuleState getBaseStateForVariant(GameRules.Key<?> key, Variant variant) {
+    return switch (variant) {
+      case Variant.HARDCORE -> getStateForHardcore(key);
+      case Variant.TECHNICAL -> getStateForTechnical(key);
+      case Variant.BASE -> RuleState.MUTABLE;
+    };
   }
 
   private static RuleState getStateForHardcore(GameRules.Key<?> key) {
