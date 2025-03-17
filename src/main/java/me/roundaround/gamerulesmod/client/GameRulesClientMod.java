@@ -1,6 +1,7 @@
 package me.roundaround.gamerulesmod.client;
 
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
+import me.roundaround.gamerulesmod.client.option.KeyBindings;
 import me.roundaround.roundalib.gradle.api.annotation.Entrypoint;
 import net.fabricmc.api.ClientModInitializer;
 
@@ -9,5 +10,6 @@ public class GameRulesClientMod implements ClientModInitializer {
   @Override
   public void onInitializeClient() {
     ClientNetworking.registerReceivers();
+    KeyBindings.register();
   }
 }
