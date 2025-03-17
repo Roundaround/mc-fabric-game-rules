@@ -12,7 +12,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, RuleState stat
   public static final PacketCodec<ByteBuf, RuleInfo> PACKET_CODEC = PacketCodec.tuple(
       PacketCodecs.STRING,
       RuleInfo::id,
-      PacketCodecs.either(PacketCodecs.BOOL, PacketCodecs.INTEGER),
+      PacketCodecs.either(PacketCodecs.BOOLEAN, PacketCodecs.INTEGER),
       RuleInfo::value,
       RuleState.PACKET_CODEC,
       RuleInfo::state,

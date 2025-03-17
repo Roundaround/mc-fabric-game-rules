@@ -35,7 +35,7 @@ public final class Networking {
   public record SetC2S(Map<String, Either<Boolean, Integer>> values) implements CustomPayload {
     public static final CustomPayload.Id<SetC2S> ID = new CustomPayload.Id<>(SET_C2S);
     public static final PacketCodec<RegistryByteBuf, SetC2S> CODEC = PacketCodec.tuple(
-        CustomCodecs.forMap(PacketCodecs.STRING, PacketCodecs.either(PacketCodecs.BOOL, PacketCodecs.INTEGER)),
+        CustomCodecs.forMap(PacketCodecs.STRING, PacketCodecs.either(PacketCodecs.BOOLEAN, PacketCodecs.INTEGER)),
         SetC2S::values,
         SetC2S::new
     );
@@ -51,7 +51,7 @@ public final class Networking {
     public static final PacketCodec<RegistryByteBuf, FetchC2S> CODEC = PacketCodec.tuple(
         PacketCodecs.INTEGER,
         FetchC2S::reqId,
-        PacketCodecs.BOOL,
+        PacketCodecs.BOOLEAN,
         FetchC2S::includeImmutable,
         FetchC2S::new
     );
