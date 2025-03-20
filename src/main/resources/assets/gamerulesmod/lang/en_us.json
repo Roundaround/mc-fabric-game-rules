@@ -16,5 +16,7 @@
   "gamerulesmod.confirm.hardcore": "Game rules can only be changed once in hardcore worlds, so you will not be able to change them again.",
   "gamerulesmod.confirm.summary": "Changes made:",
   "gamerulesmod.confirm.more": "(and %s more)",
-  "gamerulesmod.confirm.save": "Save"
+  "gamerulesmod.confirm.save": "Save",
+  "gamerulesmod.key.openEditScreen": "Open Game Rules Edit Screen",
+  "gamerulesmod.key.category": "Game Rules Mod"
 }
