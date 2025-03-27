@@ -41,6 +41,8 @@ public class GameRulesStorage extends PersistentState {
     for (RuleHistory.ListStyle history : historyValues) {
       this.history.put(history.key(), history.toMapStyle());
     }
+    // Mark dirty to force re-saving in the new map-based format
+    this.markDirty();
   }
 
   public Map<String, RuleHistory> getHistory() {
