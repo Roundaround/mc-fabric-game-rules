@@ -2,7 +2,7 @@ package me.roundaround.gamerulesmod;
 
 import me.roundaround.gamerulesmod.network.Networking;
 import me.roundaround.gamerulesmod.server.network.ServerNetworking;
-import me.roundaround.roundalib.gradle.api.annotation.Entrypoint;
+import me.roundaround.gradle.api.annotation.Entrypoint;
 import net.fabricmc.api.ModInitializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

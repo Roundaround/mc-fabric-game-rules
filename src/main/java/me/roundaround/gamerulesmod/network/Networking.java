@@ -4,7 +4,7 @@ import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.generated.Variant;
-import me.roundaround.gamerulesmod.roundalib.network.CustomCodecs;
+import me.roundaround.gamerulesmod.roundalib.network.RoundaLibPacketCodecs;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
@@ -35,7 +35,10 @@ public final class Networking {
   public record SetC2S(Map<String, Either<Boolean, Integer>> values) implements CustomPayload {
     public static final CustomPayload.Id<SetC2S> ID = new CustomPayload.Id<>(SET_C2S);
     public static final PacketCodec<RegistryByteBuf, SetC2S> CODEC = PacketCodec.tuple(
-        CustomCodecs.forMap(PacketCodecs.STRING, PacketCodecs.either(PacketCodecs.BOOLEAN, PacketCodecs.INTEGER)),
+        RoundaLibPacketCodecs.forMap(
+            PacketCodecs.STRING,
+            PacketCodecs.either(PacketCodecs.BOOLEAN, PacketCodecs.INTEGER)
+        ),
         SetC2S::values,
         SetC2S::new
     );
@@ -76,7 +79,7 @@ public final class Networking {
         FetchS2C::reqId,
         VARIANT_CODEC,
         FetchS2C::activeVariant,
-        CustomCodecs.forList(RuleInfo.PACKET_CODEC),
+        RoundaLibPacketCodecs.forList(RuleInfo.PACKET_CODEC),
         FetchS2C::rules,
         FetchS2C::new
     );

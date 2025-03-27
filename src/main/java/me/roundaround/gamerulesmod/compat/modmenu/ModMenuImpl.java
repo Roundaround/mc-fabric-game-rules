@@ -5,7 +5,7 @@ import com.terraformersmc.modmenu.api.ModMenuApi;
 import me.roundaround.gamerulesmod.client.gui.screen.GameRuleScreen;
 import me.roundaround.gamerulesmod.client.gui.screen.UnavailableScreen;
 import me.roundaround.gamerulesmod.network.Networking;
-import me.roundaround.roundalib.gradle.api.annotation.Entrypoint;
+import me.roundaround.gradle.api.annotation.Entrypoint;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;

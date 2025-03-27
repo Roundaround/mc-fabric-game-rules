@@ -2,7 +2,7 @@ package me.roundaround.gamerulesmod.common.gamerule;
 
 import com.mojang.datafixers.util.Either;
 import io.netty.buffer.ByteBuf;
-import me.roundaround.gamerulesmod.roundalib.network.CustomCodecs;
+import me.roundaround.gamerulesmod.roundalib.network.RoundaLibPacketCodecs;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
 
@@ -16,7 +16,7 @@ public record RuleInfo(String id, Either<Boolean, Integer> value, RuleState stat
       RuleInfo::value,
       RuleState.PACKET_CODEC,
       RuleInfo::state,
-      CustomCodecs.nullable(CustomCodecs.DATE),
+      RoundaLibPacketCodecs.nullable(RoundaLibPacketCodecs.DATE),
       RuleInfo::changed,
       RuleInfo::new
   );

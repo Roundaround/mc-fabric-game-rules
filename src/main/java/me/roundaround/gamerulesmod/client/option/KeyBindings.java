@@ -1,7 +1,7 @@
 package me.roundaround.gamerulesmod.client.option;
 
 import me.roundaround.gamerulesmod.client.gui.screen.GameRuleScreen;
-import me.roundaround.gamerulesmod.roundalib.client.event.MinecraftClientEvents;
+import me.roundaround.gamerulesmod.roundalib.event.MinecraftClientEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;

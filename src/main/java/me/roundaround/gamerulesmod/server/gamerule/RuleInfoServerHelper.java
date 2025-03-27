@@ -98,7 +98,7 @@ public final class RuleInfoServerHelper {
 
   private static RuleState getStateForSingleplayerHardcoreWorld(GameRules.Key<?> key, MinecraftServer server) {
     RuleState state = getBaseStateForVariant(key, Constants.ACTIVE_VARIANT);
-    return state.equals(RuleState.MUTABLE) && GameRulesStorage.getInstance(server).hasChanged(key) ?
+    return state.equals(RuleState.MUTABLE) && server.gamerulesmod$getGameRulesHistory().hasChanged(key) ?
         RuleState.LOCKED :
         state;
   }
@@ -131,7 +131,7 @@ public final class RuleInfoServerHelper {
   }
 
   private static Date getChangedDate(GameRules.Key<?> key, ServerPlayerEntity player) {
-    return GameRulesStorage.getInstance(player.server).getLastChangeDate(key);
+    return player.server.gamerulesmod$getGameRulesHistory().getLastChangeDate(key);
   }
 
   private RuleInfoServerHelper() {

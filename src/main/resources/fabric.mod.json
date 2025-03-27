@@ -17,6 +17,9 @@
     "loom:injected_interfaces": {
       "net/minecraft/class_1928": [
         "me/roundaround/gamerulesmod/common/gamerule/GameRulesExtensions"
+      ],
+      "net/minecraft/server/MinecraftServer": [
+        "me/roundaround/gamerulesmod/server/MinecraftServerExtensions"
       ]
     }
   }

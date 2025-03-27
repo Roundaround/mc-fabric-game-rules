@@ -1,6 +1,7 @@
 package me.roundaround.gamerulesmod.common.gamerule;
 
 import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.Codec;
 import net.minecraft.nbt.AbstractNbtNumber;
 import net.minecraft.nbt.NbtByte;
 import net.minecraft.nbt.NbtElement;

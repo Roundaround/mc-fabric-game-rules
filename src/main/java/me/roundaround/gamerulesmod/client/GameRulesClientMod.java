@@ -2,7 +2,7 @@ package me.roundaround.gamerulesmod.client;
 
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
 import me.roundaround.gamerulesmod.client.option.KeyBindings;
-import me.roundaround.roundalib.gradle.api.annotation.Entrypoint;
+import me.roundaround.gradle.api.annotation.Entrypoint;
 import net.fabricmc.api.ClientModInitializer;
 
 @Entrypoint(Entrypoint.CLIENT)

@@ -70,7 +70,7 @@ public final class ServerNetworking {
           .stream()
           .map(RuleInfo::id)
           .collect(Collectors.toSet());
-      final GameRulesStorage historyStorage = GameRulesStorage.getInstance(server);
+      final GameRulesStorage historyStorage = server.gamerulesmod$getGameRulesHistory();
       final var warnCount = new Object() {
         int value = 0;
       };

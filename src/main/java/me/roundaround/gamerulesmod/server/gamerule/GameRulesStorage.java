@@ -1,41 +1,57 @@
 package me.roundaround.gamerulesmod.server.gamerule;
 
 import com.mojang.datafixers.util.Either;
-import me.roundaround.gamerulesmod.GameRulesMod;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.roundaround.gamerulesmod.common.gamerule.RuleHistory;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
+import me.roundaround.gamerulesmod.generated.Constants;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.PersistentState;
-import net.minecraft.world.World;
+import net.minecraft.world.PersistentStateType;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GameRulesStorage extends PersistentState {
+  public static final Codec<GameRulesStorage> CODEC = Codec.unboundedMap(Codec.STRING, RuleHistory.CODEC)
+      .xmap(GameRulesStorage::new, GameRulesStorage::getHistory);
+  public static final Codec<GameRulesStorage> LIST_STYLE_CODEC = RecordCodecBuilder.create((instance) -> instance.group(
+          Codec.list(RuleHistory.ListStyle.CODEC).fieldOf("History").forGetter(GameRulesStorage::getHistoryValues))
+      .apply(instance, GameRulesStorage::new));
+  public static PersistentStateType<GameRulesStorage> STATE_TYPE = new PersistentStateType<>(
+      Constants.MOD_ID,
+      GameRulesStorage::new,
+      Codec.withAlternative(CODEC, LIST_STYLE_CODEC),
+      null
+  );
+
   private final HashMap<String, RuleHistory> history = new HashMap<>();
 
   private GameRulesStorage() {
+    this.markDirty();
   }
 
-  public static GameRulesStorage getInstance(MinecraftServer server) {
-    ServerWorld world;
-    if (server == null || (world = server.getWorld(World.OVERWORLD)) == null) {
-      IllegalStateException exception = new IllegalStateException(
-          "Trying to get a GameRulesStorage instance when server is not running");
-      GameRulesMod.LOGGER.error(exception);
-      throw exception;
+  private GameRulesStorage(Map<String, RuleHistory> history) {
+    this.history.putAll(history);
+  }
+
+  private GameRulesStorage(List<RuleHistory.ListStyle> historyValues) {
+    for (RuleHistory.ListStyle history : historyValues) {
+      this.history.put(history.key(), history.toMapStyle());
     }
-    Type<GameRulesStorage> persistentStateType = new PersistentState.Type<>(
-        GameRulesStorage::new,
-        GameRulesStorage::fromNbt,
-        null
-    );
-    return world.getPersistentStateManager().getOrCreate(persistentStateType, GameRulesMod.MOD_ID);
+  }
+
+  public Map<String, RuleHistory> getHistory() {
+    return Map.copyOf(this.history);
+  }
+
+  public List<RuleHistory.ListStyle> getHistoryValues() {
+    return this.history.entrySet()
+        .stream()
+        .map((entry) -> RuleHistory.ListStyle.fromMapStyle(entry.getValue(), entry.getKey()))
+        .toList();
   }
 
   public boolean hasChanged(GameRules.Key<?> key) {
@@ -85,30 +101,5 @@ public class GameRulesStorage extends PersistentState {
   public void recordChange(String id, Either<Boolean, Integer> previousValue) {
     this.history.computeIfAbsent(id, (key) -> RuleHistory.create(previousValue)).recordChange(previousValue);
     this.markDirty();
-  }
-
-  @Override
-  public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-    NbtList historyNbt = new NbtList();
-    this.history.forEach((id, history) -> {
-      NbtCompound entryNbt = new NbtCompound();
-      entryNbt.putString("Key", id);
-      historyNbt.add(history.writeNbt(entryNbt));
-    });
-    nbt.put("History", historyNbt);
-    return nbt;
-  }
-
-  private static GameRulesStorage fromNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-    GameRulesStorage storage = new GameRulesStorage();
-
-    NbtList historyNbt = nbt.getList("History", NbtElement.COMPOUND_TYPE);
-    for (NbtElement elementNbt : historyNbt) {
-      NbtCompound entryNbt = (NbtCompound) elementNbt;
-      String id = entryNbt.getString("Key");
-      storage.history.put(id, RuleHistory.fromNbt(entryNbt));
-    }
-
-    return storage;
   }
 }

@@ -10,23 +10,23 @@ import java.util.function.IntFunction;
 public enum RuleState {
   MUTABLE(0), IMMUTABLE(1), LOCKED(2), DENIED(3);
 
-  public static final IntFunction<RuleState> ID_TO_VALUE_FUNCTION = ValueLists.createIdToValueFunction(
-      RuleState::getId,
+  public static final IntFunction<RuleState> ID_TO_VALUE_FUNCTION = ValueLists.createIndexToValueFunction(
+      RuleState::getIndex,
       values(),
       ValueLists.OutOfBoundsHandling.WRAP
   );
   public static final PacketCodec<ByteBuf, RuleState> PACKET_CODEC = PacketCodecs.indexed(
       ID_TO_VALUE_FUNCTION,
-      RuleState::getId
+      RuleState::getIndex
   );
 
-  private final int id;
+  private final int index;
 
-  RuleState(int id) {
-    this.id = id;
+  RuleState(int index) {
+    this.index = index;
   }
 
-  public int getId() {
-    return this.id;
+  public int getIndex() {
+    return this.index;
   }
 }
