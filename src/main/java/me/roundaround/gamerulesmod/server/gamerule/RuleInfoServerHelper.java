@@ -19,6 +19,7 @@ import java.util.function.Predicate;
 
 public final class RuleInfoServerHelper {
   private static final Set<GameRules.Key<?>> TECHNICAL_NON_CHEAT = Set.of(
+      GameRules.ALLOW_FIRE_TICKS_AWAY_FROM_PLAYER,
       GameRules.ANNOUNCE_ADVANCEMENTS,
       GameRules.COMMAND_BLOCK_OUTPUT,
       GameRules.COMMAND_MODIFICATION_BLOCK_LIMIT,
@@ -37,9 +38,11 @@ public final class RuleInfoServerHelper {
       GameRules.REDUCED_DEBUG_INFO,
       GameRules.SEND_COMMAND_FEEDBACK,
       GameRules.SHOW_DEATH_MESSAGES,
-      GameRules.SPAWN_CHUNK_RADIUS
+      GameRules.SPAWN_CHUNK_RADIUS,
+      GameRules.TNT_EXPLODES
   );
   private static final Set<GameRules.Key<?>> HARDCORE_NON_CHEAT = Set.of(
+      GameRules.ALLOW_FIRE_TICKS_AWAY_FROM_PLAYER,
       GameRules.DO_FIRE_TICK,
       GameRules.DO_MOB_GRIEFING,
       GameRules.DO_VINES_SPREAD,
