@@ -33,9 +33,9 @@ public final class ServerNetworking {
 
   private static void handleFetch(Networking.FetchC2S payload, ServerPlayNetworking.Context context) {
     final ServerPlayerEntity player = context.player();
-    final MinecraftServer server = player.server;
+    final MinecraftServer server = player.getServer();
     server.execute(() -> {
-      ServerWorld world = player.getServerWorld();
+      ServerWorld world = player.getWorld();
       if (world == null) {
         return;
       }
@@ -54,9 +54,9 @@ public final class ServerNetworking {
 
   private static void handleSet(Networking.SetC2S payload, ServerPlayNetworking.Context context) {
     final ServerPlayerEntity player = context.player();
-    final MinecraftServer server = player.server;
+    final MinecraftServer server = player.getServer();
     server.execute(() -> {
-      ServerWorld world = player.getServerWorld();
+      ServerWorld world = player.getWorld();
       if (world == null) {
         return;
       }

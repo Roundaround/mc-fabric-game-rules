@@ -30,6 +30,7 @@ public final class RuleInfoServerHelper {
       GameRules.DO_MOB_GRIEFING,
       GameRules.DO_VINES_SPREAD,
       GameRules.GLOBAL_SOUND_EVENTS,
+      GameRules.LOCATOR_BAR,
       GameRules.LOG_ADMIN_COMMANDS,
       GameRules.MAX_COMMAND_CHAIN_LENGTH,
       GameRules.MAX_COMMAND_FORK_COUNT,
@@ -46,6 +47,7 @@ public final class RuleInfoServerHelper {
       GameRules.DO_FIRE_TICK,
       GameRules.DO_MOB_GRIEFING,
       GameRules.DO_VINES_SPREAD,
+      GameRules.LOCATOR_BAR,
       GameRules.SPAWN_CHUNK_RADIUS
   );
 
@@ -83,8 +85,8 @@ public final class RuleInfoServerHelper {
   }
 
   private static RuleState getState(GameRules.Key<?> key, ServerPlayerEntity player) {
-    MinecraftServer server = player.server;
-    ServerWorld world = player.getServerWorld();
+    MinecraftServer server = player.getServer();
+    ServerWorld world = player.getWorld();
 
     if (!server.isSingleplayer()) {
       return getStateForMultiplayer(key, server, player);
@@ -134,7 +136,7 @@ public final class RuleInfoServerHelper {
   }
 
   private static Date getChangedDate(GameRules.Key<?> key, ServerPlayerEntity player) {
-    return player.server.gamerulesmod$getGameRulesHistory().getLastChangeDate(key);
+    return player.getServer().gamerulesmod$getGameRulesHistory().getLastChangeDate(key);
   }
 
   private RuleInfoServerHelper() {
