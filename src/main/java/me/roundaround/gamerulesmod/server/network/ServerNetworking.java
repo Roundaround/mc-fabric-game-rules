@@ -9,7 +9,6 @@ import me.roundaround.gamerulesmod.network.Networking;
 import me.roundaround.gamerulesmod.server.gamerule.GameRulesStorage;
 import me.roundaround.gamerulesmod.server.gamerule.RuleInfoServerHelper;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.GameRules;
@@ -32,10 +31,9 @@ public final class ServerNetworking {
   }
 
   private static void handleFetch(Networking.FetchC2S payload, ServerPlayNetworking.Context context) {
-    final ServerPlayerEntity player = context.player();
-    final MinecraftServer server = player.getServer();
-    server.execute(() -> {
-      ServerWorld world = player.getWorld();
+    context.server().execute(() -> {
+      ServerPlayerEntity player = context.player();
+      ServerWorld world = player.getEntityWorld();
       if (world == null) {
         return;
       }
@@ -53,10 +51,9 @@ public final class ServerNetworking {
   }
 
   private static void handleSet(Networking.SetC2S payload, ServerPlayNetworking.Context context) {
-    final ServerPlayerEntity player = context.player();
-    final MinecraftServer server = player.getServer();
-    server.execute(() -> {
-      ServerWorld world = player.getWorld();
+    context.server().execute(() -> {
+      ServerPlayerEntity player = context.player();
+      ServerWorld world = player.getEntityWorld();
       if (world == null) {
         return;
       }
@@ -70,7 +67,7 @@ public final class ServerNetworking {
           .stream()
           .map(RuleInfo::id)
           .collect(Collectors.toSet());
-      final GameRulesStorage historyStorage = server.gamerulesmod$getGameRulesHistory();
+      final GameRulesStorage historyStorage = world.getServer().gamerulesmod$getGameRulesHistory();
       final var warnCount = new Object() {
         int value = 0;
       };
@@ -88,7 +85,7 @@ public final class ServerNetworking {
       if (warnCount.value > 0) {
         GameRulesMod.LOGGER.warn(
             "Player {} attempted to change {} game rule(s), but did not have permission to do so.",
-            player.getGameProfile().getName(),
+            player.getPlayerConfigEntry().name(),
             warnCount.value
         );
       }

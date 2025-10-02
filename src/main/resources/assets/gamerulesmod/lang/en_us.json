@@ -22,6 +22,5 @@
   "gamerulesmod.unavailable.notInWorld.2": "Please join a world to use the mod!",
   "gamerulesmod.unavailable.missingOnServer.1": "The Game Rules mod is required on the server.",
   "gamerulesmod.unavailable.missingOnServer.2": "Please install it server-side in order to use the mod!",
-  "gamerulesmod.key.openEditScreen": "Open Game Rules Edit Screen",
-  "gamerulesmod.key.category": "Game Rules Mod"
+  "gamerulesmod.key.openEditScreen": "Open Game Rules Edit Screen"
 }

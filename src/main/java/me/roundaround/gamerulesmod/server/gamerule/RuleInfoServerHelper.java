@@ -20,7 +20,9 @@ import java.util.function.Predicate;
 public final class RuleInfoServerHelper {
   private static final Set<GameRules.Key<?>> TECHNICAL_NON_CHEAT = Set.of(
       GameRules.ALLOW_FIRE_TICKS_AWAY_FROM_PLAYER,
+      GameRules.ALLOW_ENTERING_NETHER_USING_PORTALS,
       GameRules.ANNOUNCE_ADVANCEMENTS,
+      GameRules.COMMAND_BLOCKS_ENABLED,
       GameRules.COMMAND_BLOCK_OUTPUT,
       GameRules.COMMAND_MODIFICATION_BLOCK_LIMIT,
       GameRules.DISABLE_ELYTRA_MOVEMENT_CHECK,
@@ -36,10 +38,12 @@ public final class RuleInfoServerHelper {
       GameRules.MAX_COMMAND_FORK_COUNT,
       GameRules.PLAYERS_NETHER_PORTAL_CREATIVE_DELAY,
       GameRules.PLAYERS_SLEEPING_PERCENTAGE,
+      GameRules.PVP,
       GameRules.REDUCED_DEBUG_INFO,
       GameRules.SEND_COMMAND_FEEDBACK,
       GameRules.SHOW_DEATH_MESSAGES,
-      GameRules.SPAWN_CHUNK_RADIUS,
+      GameRules.SPAWN_MONSTERS,
+      GameRules.SPAWNER_BLOCKS_ENABLED,
       GameRules.TNT_EXPLODES
   );
   private static final Set<GameRules.Key<?>> HARDCORE_NON_CHEAT = Set.of(
@@ -48,7 +52,7 @@ public final class RuleInfoServerHelper {
       GameRules.DO_MOB_GRIEFING,
       GameRules.DO_VINES_SPREAD,
       GameRules.LOCATOR_BAR,
-      GameRules.SPAWN_CHUNK_RADIUS
+      GameRules.PVP
   );
 
   public static RuleInfo createInfo(GameRules gameRules, GameRules.Key<?> key, ServerPlayerEntity player) {
@@ -85,8 +89,8 @@ public final class RuleInfoServerHelper {
   }
 
   private static RuleState getState(GameRules.Key<?> key, ServerPlayerEntity player) {
-    MinecraftServer server = player.getServer();
-    ServerWorld world = player.getWorld();
+    ServerWorld world = player.getEntityWorld();
+    MinecraftServer server = world.getServer();
 
     if (!server.isSingleplayer()) {
       return getStateForMultiplayer(key, server, player);
@@ -136,7 +140,7 @@ public final class RuleInfoServerHelper {
   }
 
   private static Date getChangedDate(GameRules.Key<?> key, ServerPlayerEntity player) {
-    return player.getServer().gamerulesmod$getGameRulesHistory().getLastChangeDate(key);
+    return player.getEntityWorld().getServer().gamerulesmod$getGameRulesHistory().getLastChangeDate(key);
   }
 
   private RuleInfoServerHelper() {

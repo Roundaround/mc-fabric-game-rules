@@ -7,8 +7,8 @@ plugins {
 roundalib {
   library {
     local = true
-    version = "3.2.0"
-    modules.addAll(LibModule.GUI, LibModule.NETWORK)
+    version = "3.3.0"
+    modules.addAll(LibModule.CORE, LibModule.GUI, LibModule.NETWORK)
   }
   variants {
     create("hardcore", "technical")

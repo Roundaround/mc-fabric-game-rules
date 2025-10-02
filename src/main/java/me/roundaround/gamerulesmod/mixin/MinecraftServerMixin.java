@@ -6,7 +6,6 @@ import me.roundaround.gamerulesmod.server.MinecraftServerExtensions;
 import me.roundaround.gamerulesmod.server.gamerule.GameRulesStorage;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.WorldGenerationProgressListener;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.PersistentStateManager;
 import net.minecraft.world.World;
@@ -41,7 +40,6 @@ public abstract class MinecraftServerMixin implements MinecraftServerExtensions 
   )
   )
   private void afterPersistentStateManagerReady(
-      WorldGenerationProgressListener worldGenerationProgressListener,
       CallbackInfo ci,
       @Local ServerWorld world,
       @Local PersistentStateManager persistentStateManager

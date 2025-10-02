@@ -15,7 +15,7 @@ public final class KeyBindings {
         "gamerulesmod.key.openEditScreen",
         InputUtil.Type.KEYSYM,
         GLFW.GLFW_KEY_UNKNOWN,
-        "gamerulesmod.key.category"
+        KeyBinding.Category.MISC
     ));
 
     MinecraftClientEvents.HANDLE_INPUT.register((client) -> {
