@@ -3,11 +3,12 @@ package me.roundaround.gamerulesmod.server.gamerule;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import me.roundaround.gamerulesmod.common.gamerule.RuleHelper;
 import me.roundaround.gamerulesmod.common.gamerule.RuleHistory;
 import me.roundaround.gamerulesmod.generated.Constants;
-import net.minecraft.world.GameRules;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.PersistentStateType;
+import net.minecraft.world.rule.GameRule;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -56,48 +57,48 @@ public class GameRulesStorage extends PersistentState {
         .toList();
   }
 
-  public boolean hasChanged(GameRules.Key<?> key) {
-    return this.hasChanged(key.getName());
+  public boolean hasChanged(GameRule<?> rule) {
+    return this.hasChanged(RuleHelper.idOf(rule));
   }
 
   public boolean hasChanged(String id) {
     return this.history.containsKey(id) && this.history.get(id).hasChanged();
   }
 
-  public int getChangeCount(GameRules.Key<?> key) {
-    return this.getChangeCount(key.getName());
+  public int getChangeCount(GameRule<?> rule) {
+    return this.getChangeCount(RuleHelper.idOf(rule));
   }
 
   public int getChangeCount(String id) {
     return this.history.containsKey(id) ? this.history.get(id).getChangeCount() : 0;
   }
 
-  public Date getLastChangeDate(GameRules.Key<?> key) {
-    return this.getLastChangeDate(key.getName());
+  public Date getLastChangeDate(GameRule<?> rule) {
+    return this.getLastChangeDate(RuleHelper.idOf(rule));
   }
 
   public Date getLastChangeDate(String id) {
     return this.history.containsKey(id) ? this.history.get(id).getLastChangeDate() : null;
   }
 
-  public Either<Boolean, Integer> getOriginalValue(GameRules.Key<?> key) {
-    return this.getOriginalValue(key.getName());
+  public Either<Boolean, Integer> getOriginalValue(GameRule<?> rule) {
+    return this.getOriginalValue(RuleHelper.idOf(rule));
   }
 
   public Either<Boolean, Integer> getOriginalValue(String id) {
     return this.history.containsKey(id) ? this.history.get(id).getOriginalValue() : null;
   }
 
-  public Either<Boolean, Integer> getPreviousValue(GameRules.Key<?> key) {
-    return this.getPreviousValue(key.getName());
+  public Either<Boolean, Integer> getPreviousValue(GameRule<?> rule) {
+    return this.getPreviousValue(RuleHelper.idOf(rule));
   }
 
   public Either<Boolean, Integer> getPreviousValue(String id) {
     return this.history.containsKey(id) ? this.history.get(id).getPreviousValue() : null;
   }
 
-  public void recordChange(GameRules.Key<?> key, Either<Boolean, Integer> previousValue) {
-    this.recordChange(key.getName(), previousValue);
+  public void recordChange(GameRule<?> rule, Either<Boolean, Integer> previousValue) {
+    this.recordChange(RuleHelper.idOf(rule), previousValue);
   }
 
   public void recordChange(String id, Either<Boolean, Integer> previousValue) {

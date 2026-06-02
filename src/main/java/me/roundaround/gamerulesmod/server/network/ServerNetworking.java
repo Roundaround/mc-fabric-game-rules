@@ -2,6 +2,7 @@ package me.roundaround.gamerulesmod.server.network;
 
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
+import me.roundaround.gamerulesmod.common.gamerule.RuleHelper;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.generated.Constants;
@@ -11,7 +12,7 @@ import me.roundaround.gamerulesmod.server.gamerule.RuleInfoServerHelper;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.GameRules;
+import net.minecraft.world.rule.GameRules;
 
 import java.util.List;
 import java.util.Set;
@@ -77,8 +78,8 @@ public final class ServerNetworking {
           warnCount.value++;
         }
 
-        Either<Boolean, Integer> previousValue = gameRules.gamerulesmod$getValue(id);
-        gameRules.gamerulesmod$set(id, either);
+        Either<Boolean, Integer> previousValue = RuleHelper.getValue(gameRules, id);
+        RuleHelper.setValue(gameRules, id, either);
         historyStorage.recordChange(id, previousValue);
       });
 

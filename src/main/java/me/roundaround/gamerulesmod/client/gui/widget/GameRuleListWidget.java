@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.client.ClientUtil;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
+import me.roundaround.gamerulesmod.common.gamerule.RuleHelper;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.generated.Variant;
@@ -31,7 +32,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
-import net.minecraft.world.GameRules;
+import net.minecraft.world.rule.GameRule;
+import net.minecraft.world.rule.GameRuleCategory;
+import net.minecraft.world.rule.GameRules;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.ZoneId;
@@ -43,8 +46,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleListWidget.Entry> implements AutoCloseable {
-  private static GameRules defaultRules = null;
-
   private final Consumer<List<RuleInfo>> onRulesResponse;
   private final BiConsumer<Boolean, Boolean> onRuleChange;
 
@@ -123,66 +124,33 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     final HashMap<String, Date> changedMap = new HashMap<>();
 
     rules.forEach((ruleInfo) -> {
-      gameRules.gamerulesmod$set(ruleInfo.id(), ruleInfo.value());
+      RuleHelper.setValue(gameRules, ruleInfo.id(), ruleInfo.value());
       stateMap.put(ruleInfo.id(), ruleInfo.state());
       changedMap.put(ruleInfo.id(), ruleInfo.changed());
     });
 
-    final HashMap<GameRules.Category, HashMap<GameRules.Key<?>, FlowListWidget.EntryFactory<? extends RuleEntry>>> ruleEntries = new HashMap<>();
+    final HashMap<GameRuleCategory, HashMap<GameRule<?>, FlowListWidget.EntryFactory<? extends RuleEntry>>> ruleEntries = new HashMap<>();
 
-    gameRules.accept(new GameRules.Visitor() {
-      @Override
-      public void visitBoolean(GameRules.Key<GameRules.BooleanRule> key, GameRules.Type<GameRules.BooleanRule> type) {
-        RuleState state = stateMap.getOrDefault(key.getName(), RuleState.IMMUTABLE);
-        if (showImmutable || !state.equals(RuleState.IMMUTABLE)) {
-          this.addEntry(
-              key, BooleanRuleEntry.factory(
-                  serverActiveVariant,
-                  gameRules,
-                  key,
-                  state,
-                  changedMap.get(key.getName()),
-                  GameRuleListWidget.this::onRuleChange,
-                  textRenderer
-              )
-          );
-        }
+    gameRules.streamRules().filter(RuleHelper::isSupported).forEach((rule) -> {
+      RuleState state = stateMap.getOrDefault(RuleHelper.idOf(rule), RuleState.IMMUTABLE);
+      if (!showImmutable && state.equals(RuleState.IMMUTABLE)) {
+        return;
       }
-
-      @Override
-      public void visitInt(GameRules.Key<GameRules.IntRule> key, GameRules.Type<GameRules.IntRule> type) {
-        RuleState state = stateMap.getOrDefault(key.getName(), RuleState.IMMUTABLE);
-        if (showImmutable || !state.equals(RuleState.IMMUTABLE)) {
-          this.addEntry(
-              key, IntRuleEntry.factory(
-                  serverActiveVariant,
-                  gameRules,
-                  key,
-                  state,
-                  changedMap.get(key.getName()),
-                  GameRuleListWidget.this::onRuleChange,
-                  textRenderer
-              )
-          );
-        }
-      }
-
-      private void addEntry(GameRules.Key<?> key, FlowListWidget.EntryFactory<? extends RuleEntry> factory) {
-        ruleEntries.computeIfAbsent(key.getCategory(), (category) -> new HashMap<>()).put(key, factory);
-      }
+      Date changed = changedMap.get(RuleHelper.idOf(rule));
+      FlowListWidget.EntryFactory<? extends RuleEntry> factory = RuleHelper.isBoolean(rule)
+          ? BooleanRuleEntry.factory(serverActiveVariant, gameRules, rule, state, changed, this::onRuleChange, textRenderer)
+          : IntRuleEntry.factory(serverActiveVariant, gameRules, rule, state, changed, this::onRuleChange, textRenderer);
+      ruleEntries.computeIfAbsent(rule.getCategory(), (category) -> new HashMap<>()).put(rule, factory);
     });
 
     if (ruleEntries.isEmpty()) {
       this.addEntry(EmptyEntry.factory(textRenderer));
     }
 
-    ruleEntries.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach((categoryEntry) -> {
-      this.addEntry(CategoryEntry.factory(Text.translatable(categoryEntry.getKey().getCategory()), textRenderer));
-
-      categoryEntry.getValue()
-          .entrySet()
-          .stream()
-          .sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRules.Key::getName)))
+    ruleEntries.entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRuleCategory::id))).forEach((categoryEntry) -> {
+      this.addEntry(CategoryEntry.factory(categoryEntry.getKey().getText(), textRenderer));
+      categoryEntry.getValue().entrySet().stream()
+          .sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRule::getId)))
           .forEach((ruleEntry) -> this.addEntry(ruleEntry.getValue()));
     });
 
@@ -219,13 +187,6 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.cancel();
   }
 
-  private static GameRules getDefaultRules() {
-    if (defaultRules == null) {
-      defaultRules = ClientUtil.getDefaultRules();
-    }
-    return defaultRules;
-  }
-
   public static class RuleContext {
     private final String id;
     private final Text name;
@@ -258,22 +219,22 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       this.value = initialValue;
     }
 
-    public static <T extends GameRules.Rule<T>> RuleContext of(
+    public static RuleContext of(
         Variant serverActiveVariant,
         GameRules gameRules,
-        GameRules.Key<T> key,
+        GameRule<?> rule,
         RuleState state,
         Date changed,
         Runnable onChange
     ) {
-      String id = key.getName();
-      Either<Boolean, Integer> value = gameRules.gamerulesmod$getValue(id);
+      String id = RuleHelper.idOf(rule);
+      Either<Boolean, Integer> value = RuleHelper.getValue(gameRules, rule);
 
       return new RuleContext(
           id,
-          getDisplayName(key),
-          getTooltip(serverActiveVariant, key, value, state, changed),
-          getNarrationName(key),
+          getDisplayName(rule),
+          getTooltip(serverActiveVariant, rule, value, state, changed),
+          getNarrationName(rule),
           value,
           state,
           onChange
@@ -334,44 +295,47 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       this.onChange.run();
     }
 
-    private static <T extends GameRules.Rule<T>> Text getDisplayName(GameRules.Key<T> key) {
-      return Text.translatable(key.getTranslationKey());
+    private static Text getDisplayName(GameRule<?> rule) {
+      return Text.translatable(rule.getTranslationKey());
     }
 
-    private static <T extends GameRules.Rule<T>> List<Text> getTooltip(
+    private static List<Text> getTooltip(
         Variant serverActiveVariant,
-        GameRules.Key<T> key,
+        GameRule<?> rule,
         Either<Boolean, Integer> currentValue,
         RuleState state,
         Date changed
     ) {
       ArrayList<Text> lines = new ArrayList<>();
 
-      lines.add(Text.literal(key.getName()).formatted(Formatting.YELLOW));
-      getDescription(key).ifPresent(lines::add);
-      lines.add(getDefaultValueLine(key));
-      lines.add(getCurrentValueLine(key, currentValue));
+      lines.add(Text.literal(RuleHelper.idOf(rule)).formatted(Formatting.YELLOW));
+      getDescription(rule).ifPresent(lines::add);
+      lines.add(getDefaultValueLine(rule));
+      lines.add(getCurrentValueLine(rule, currentValue));
       lines.add(getChangedLine(changed));
       getDisabledLine(state, serverActiveVariant).ifPresent(lines::add);
 
       return lines;
     }
 
-    private static Optional<Text> getDescription(GameRules.Key<?> key) {
-      String descriptionI18nKey = key.getTranslationKey() + ".description";
+    private static Optional<Text> getDescription(GameRule<?> rule) {
+      String descriptionI18nKey = rule.getTranslationKey() + ".description";
       if (I18n.hasTranslation(descriptionI18nKey)) {
         return Optional.of(Text.translatable(descriptionI18nKey));
       }
       return Optional.empty();
     }
 
-    private static Text getDefaultValueLine(GameRules.Key<?> key) {
-      return Text.translatable("editGamerule.default", Text.literal(getDefaultRules().get(key).serialize()))
+    private static Text getDefaultValueLine(GameRule<?> rule) {
+      return Text.translatable(
+              "editGamerule.default",
+              Text.literal(RuleHelper.getDefaultValue(rule).map(Object::toString, Object::toString))
+          )
           .formatted(Formatting.GRAY);
     }
 
-    private static Text getCurrentValueLine(GameRules.Key<?> key, Either<Boolean, Integer> currentValue) {
-      Either<Boolean, Integer> defaultValue = getDefaultRules().gamerulesmod$getValue(key.getName());
+    private static Text getCurrentValueLine(GameRule<?> rule, Either<Boolean, Integer> currentValue) {
+      Either<Boolean, Integer> defaultValue = RuleHelper.getDefaultValue(rule);
       boolean differentFromDefault = !Objects.equals(defaultValue, currentValue);
 
       MutableText value = Text.literal(currentValue.map(Object::toString, Object::toString));
@@ -425,9 +389,9 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       };
     }
 
-    private static String getNarrationName(GameRules.Key<?> key) {
-      String defaultLine = getDefaultValueLine(key).getString();
-      return getDescription(key).map((description) -> description.getString() + "\n" + defaultLine).orElse(defaultLine);
+    private static String getNarrationName(GameRule<?> rule) {
+      String defaultLine = getDefaultValueLine(rule).getString();
+      return getDescription(rule).map((description) -> description.getString() + "\n" + defaultLine).orElse(defaultLine);
     }
   }
 
@@ -789,14 +753,14 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public static FlowListWidget.EntryFactory<BooleanRuleEntry> factory(
         Variant serverActiveVariant,
         GameRules gameRules,
-        GameRules.Key<GameRules.BooleanRule> key,
+        GameRule<?> rule,
         RuleState state,
         Date changed,
         Runnable onChange,
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new BooleanRuleEntry(
-          RuleContext.of(serverActiveVariant, gameRules, key, state, changed, onChange),
+          RuleContext.of(serverActiveVariant, gameRules, rule, state, changed, onChange),
           textRenderer,
           index,
           left,
@@ -850,14 +814,14 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     public static FlowListWidget.EntryFactory<IntRuleEntry> factory(
         Variant serverActiveVariant,
         GameRules gameRules,
-        GameRules.Key<GameRules.IntRule> key,
+        GameRule<?> rule,
         RuleState state,
         Date changed,
         Runnable onChange,
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new IntRuleEntry(
-          RuleContext.of(serverActiveVariant, gameRules, key, state, changed, onChange),
+          RuleContext.of(serverActiveVariant, gameRules, rule, state, changed, onChange),
           textRenderer,
           index,
           left,

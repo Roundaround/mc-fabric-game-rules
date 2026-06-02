@@ -3,7 +3,7 @@ package me.roundaround.gamerulesmod.client;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.resource.featuretoggle.FeatureFlags;
-import net.minecraft.world.GameRules;
+import net.minecraft.world.rule.GameRules;
 
 public final class ClientUtil {
   public static GameRules getDefaultRules() {

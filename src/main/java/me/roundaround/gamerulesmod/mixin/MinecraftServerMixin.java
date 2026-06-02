@@ -1,13 +1,11 @@
 package me.roundaround.gamerulesmod.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import me.roundaround.gamerulesmod.GameRulesMod;
 import me.roundaround.gamerulesmod.server.MinecraftServerExtensions;
 import me.roundaround.gamerulesmod.server.gamerule.GameRulesStorage;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.PersistentStateManager;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,22 +31,9 @@ public abstract class MinecraftServerMixin implements MinecraftServerExtensions 
     return world.getPersistentStateManager().getOrCreate(GameRulesStorage.STATE_TYPE);
   }
 
-  @Inject(
-      method = "createWorlds", at = @At(
-      value = "INVOKE",
-      target = "Lnet/minecraft/server/MinecraftServer;initScoreboard(Lnet/minecraft/world/PersistentStateManager;)V"
-  )
-  )
-  private void afterPersistentStateManagerReady(
-      CallbackInfo ci,
-      @Local ServerWorld world,
-      @Local PersistentStateManager persistentStateManager
-  ) {
-    if (world.getRegistryKey() != World.OVERWORLD) {
-      return;
-    }
-
-    // Force the GameRulesStorage creation on world load so it can do things like auto-migrate the data
-    persistentStateManager.getOrCreate(GameRulesStorage.STATE_TYPE);
+  @Inject(method = "createWorlds", at = @At("TAIL"))
+  private void gamerulesmod$afterWorldsCreated(CallbackInfo ci) {
+    // Force GameRulesStorage creation on world load so it can auto-migrate the data
+    this.gamerulesmod$getGameRulesHistory();
   }
 }

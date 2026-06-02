@@ -3,6 +3,7 @@ package me.roundaround.gamerulesmod.client.gui.screen;
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.client.gui.widget.GameRuleListWidget;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
+import me.roundaround.gamerulesmod.common.gamerule.RuleHelper;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.screen.ThreeSectionLayoutWidget;
@@ -16,7 +17,7 @@ import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.world.GameRules;
+import net.minecraft.world.rule.GameRules;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -104,7 +105,7 @@ public class GameRuleScreen extends Screen {
     }
 
     long mutable = rules.stream().filter((rule) -> rule.state().equals(RuleState.MUTABLE)).count();
-    this.checkbox.active = mutable < new GameRules(this.client.world.getEnabledFeatures()).gamerulesmod$size();
+    this.checkbox.active = mutable < RuleHelper.size(new GameRules(this.client.world.getEnabledFeatures()));
   }
 
   private void onRuleChange(boolean allValid, boolean anyDirty) {
