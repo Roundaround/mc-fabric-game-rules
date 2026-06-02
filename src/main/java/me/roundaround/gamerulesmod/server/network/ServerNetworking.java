@@ -79,6 +79,11 @@ public final class ServerNetworking {
         }
 
         Either<Boolean, Integer> previousValue = RuleHelper.getValue(gameRules, id);
+        if (previousValue == null) {
+          // Unknown or unregistered rule id (e.g. from a malformed packet); skip so we never
+          // store a null value into the history, which the value codec cannot serialize.
+          return;
+        }
         RuleHelper.setValue(gameRules, id, either);
         historyStorage.recordChange(id, previousValue);
       });

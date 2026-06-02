@@ -58,6 +58,18 @@ public class RuleHistory {
     this.changes.put(new Date(), previousValue);
   }
 
+  public RuleHistory mapValues(Function<Either<Boolean, Integer>, Either<Boolean, Integer>> mapper) {
+    TreeMap<Date, Either<Boolean, Integer>> mappedChanges = new TreeMap<>();
+    this.changes.forEach((date, value) -> mappedChanges.put(date, mapper.apply(value)));
+    return new RuleHistory(mapper.apply(this.originalValue), mappedChanges);
+  }
+
+  public RuleHistory mergedWith(RuleHistory other) {
+    TreeMap<Date, Either<Boolean, Integer>> mergedChanges = new TreeMap<>(this.changes);
+    mergedChanges.putAll(other.changes);
+    return new RuleHistory(this.originalValue, mergedChanges);
+  }
+
   public static RuleHistory create(Either<Boolean, Integer> originalValue) {
     return new RuleHistory(originalValue, new TreeMap<>());
   }

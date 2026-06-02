@@ -35,14 +35,19 @@ public class GameRulesStorage extends PersistentState {
   }
 
   private GameRulesStorage(Map<String, RuleHistory> history) {
-    this.history.putAll(history);
+    // Migrate pre-1.21.11 camelCase keys to the registry ids; re-save if anything changed.
+    if (LegacyRuleHistoryMigration.migrate(history, this.history)) {
+      this.markDirty();
+    }
   }
 
   private GameRulesStorage(List<RuleHistory.ListStyle> historyValues) {
+    HashMap<String, RuleHistory> loaded = new HashMap<>();
     for (RuleHistory.ListStyle history : historyValues) {
-      this.history.put(history.key(), history.toMapStyle());
+      loaded.put(history.key(), history.toMapStyle());
     }
-    // Mark dirty to force re-saving in the new map-based format
+    LegacyRuleHistoryMigration.migrate(loaded, this.history);
+    // Mark dirty to force re-saving in the new (map-based, migrated) format
     this.markDirty();
   }
 
