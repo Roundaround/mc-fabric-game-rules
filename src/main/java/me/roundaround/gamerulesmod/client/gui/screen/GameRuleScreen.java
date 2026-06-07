@@ -3,25 +3,19 @@ package me.roundaround.gamerulesmod.client.gui.screen;
 import com.mojang.datafixers.util.Either;
 import me.roundaround.gamerulesmod.client.gui.widget.GameRuleListWidget;
 import me.roundaround.gamerulesmod.client.network.ClientNetworking;
-import me.roundaround.gamerulesmod.common.gamerule.RuleHelper;
-import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
-import me.roundaround.gamerulesmod.common.gamerule.RuleState;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.screen.ThreeSectionLayoutWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.util.GuiUtil;
 import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.CheckboxWidget;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.world.rule.GameRules;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 public class GameRuleScreen extends Screen {
@@ -29,7 +23,6 @@ public class GameRuleScreen extends Screen {
   private final LinkedHashMap<String, Either<Boolean, Integer>> dirtyValues = new LinkedHashMap<>();
   private final Screen parent;
 
-  private CheckboxWidget checkbox;
   private GameRuleListWidget list;
   private ButtonWidget saveButton;
 
@@ -46,21 +39,12 @@ public class GameRuleScreen extends Screen {
     this.list = this.layout.addBody(new GameRuleListWidget(
         this.client,
         this.layout,
-        this::onRulesResponse,
         this::onRuleChange
     ));
 
     this.layout.setHeaderHeight(48);
     this.layout.getHeader().spacing(GuiUtil.PADDING);
     this.layout.addHeader(this.textRenderer, this.title);
-
-    this.checkbox = this.layout.addHeader(CheckboxWidget.builder(
-            Text.translatable("gamerulesmod.main.showImmutable"),
-            this.textRenderer
-        )
-        .callback((checkbox, checked) -> this.list.setShowImmutable(checked))
-        .checked(this.list.isShowingImmutable())
-        .build());
 
     this.saveButton = this.layout.addFooter(ButtonWidget.builder(
         ScreenTexts.DONE, (button) -> {
@@ -97,15 +81,6 @@ public class GameRuleScreen extends Screen {
     if (this.client != null) {
       this.client.setScreen(this.parent);
     }
-  }
-
-  private void onRulesResponse(List<RuleInfo> rules) {
-    if (this.client == null || this.client.world == null) {
-      return;
-    }
-
-    long mutable = rules.stream().filter((rule) -> rule.state().equals(RuleState.MUTABLE)).count();
-    this.checkbox.active = mutable < RuleHelper.size(new GameRules(this.client.world.getEnabledFeatures()));
   }
 
   private void onRuleChange(boolean allValid, boolean anyDirty) {

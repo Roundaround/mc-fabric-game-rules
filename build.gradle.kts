@@ -10,7 +10,4 @@ roundalib {
     version = "3.4.1"
     modules.addAll(LibModule.CORE, LibModule.GUI, LibModule.NETWORK)
   }
-  variants {
-    create("hardcore", "technical")
-  }
 }

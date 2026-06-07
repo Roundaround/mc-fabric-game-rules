@@ -8,7 +8,7 @@ import net.minecraft.util.function.ValueLists;
 import java.util.function.IntFunction;
 
 public enum RuleState {
-  MUTABLE(0), IMMUTABLE(1), LOCKED(2), DENIED(3);
+  MUTABLE(0), LOCKED(1), DENIED(2);
 
   public static final IntFunction<RuleState> ID_TO_VALUE_FUNCTION = ValueLists.createIndexToValueFunction(
       RuleState::getIndex,

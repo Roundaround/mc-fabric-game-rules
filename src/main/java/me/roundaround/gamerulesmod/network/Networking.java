@@ -7,7 +7,6 @@ import com.mojang.datafixers.util.Either;
 
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.generated.Constants;
-import me.roundaround.gamerulesmod.generated.Variant;
 import me.roundaround.gamerulesmod.roundalib.network.RoundaLibPacketCodecs;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryByteBuf;
@@ -48,13 +47,11 @@ public final class Networking {
     }
   }
 
-  public record FetchC2S(int reqId, boolean includeImmutable) implements CustomPayload {
+  public record FetchC2S(int reqId) implements CustomPayload {
     public static final CustomPayload.Id<FetchC2S> ID = new CustomPayload.Id<>(FETCH_C2S);
     public static final PacketCodec<RegistryByteBuf, FetchC2S> CODEC = PacketCodec.tuple(
         PacketCodecs.INTEGER,
         FetchC2S::reqId,
-        PacketCodecs.BOOLEAN,
-        FetchC2S::includeImmutable,
         FetchC2S::new);
 
     @Override
@@ -63,19 +60,11 @@ public final class Networking {
     }
   }
 
-  public record FetchS2C(int reqId, Variant activeVariant, List<RuleInfo> rules) implements CustomPayload {
-    // TODO: Auto-generate with plugin
-    private static final PacketCodec<RegistryByteBuf, Variant> VARIANT_CODEC = PacketCodec.of(
-        (variant, byeBuf) -> byeBuf.writeInt(
-            variant.ordinal()),
-        (byteBuf) -> Variant.values()[byteBuf.readInt() % Variant.values().length]);
-
+  public record FetchS2C(int reqId, List<RuleInfo> rules) implements CustomPayload {
     public static final CustomPayload.Id<FetchS2C> ID = new CustomPayload.Id<>(FETCH_S2C);
     public static final PacketCodec<RegistryByteBuf, FetchS2C> CODEC = PacketCodec.tuple(
         PacketCodecs.INTEGER,
         FetchS2C::reqId,
-        VARIANT_CODEC,
-        FetchS2C::activeVariant,
         RoundaLibPacketCodecs.forList(RuleInfo.PACKET_CODEC),
         FetchS2C::rules,
         FetchS2C::new);

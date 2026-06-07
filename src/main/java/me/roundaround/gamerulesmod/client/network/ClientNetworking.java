@@ -25,9 +25,9 @@ public final class ClientNetworking {
     ClientPlayNetworking.send(new Networking.SetC2S(values));
   }
 
-  public static ServerRequest<Networking.FetchS2C> sendFetch(boolean mutableOnly) {
+  public static ServerRequest<Networking.FetchS2C> sendFetch() {
     ServerRequest<Networking.FetchS2C> request = REQUESTS.create(Networking.FetchS2C.class);
-    ClientPlayNetworking.send(new Networking.FetchC2S(request.getReqId(), mutableOnly));
+    ClientPlayNetworking.send(new Networking.FetchC2S(request.getReqId()));
     return request;
   }
 

@@ -7,7 +7,6 @@ import me.roundaround.gamerulesmod.client.network.ClientNetworking;
 import me.roundaround.gamerulesmod.common.gamerule.RuleHelper;
 import me.roundaround.gamerulesmod.common.gamerule.RuleInfo;
 import me.roundaround.gamerulesmod.common.gamerule.RuleState;
-import me.roundaround.gamerulesmod.generated.Variant;
 import me.roundaround.gamerulesmod.network.Networking;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.NonPositioningLayoutWidget;
 import me.roundaround.gamerulesmod.roundalib.client.gui.layout.linear.LinearLayoutWidget;
@@ -43,35 +42,21 @@ import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleListWidget.Entry> implements AutoCloseable {
-  private final Consumer<List<RuleInfo>> onRulesResponse;
   private final BiConsumer<Boolean, Boolean> onRuleChange;
 
   private ServerRequest<Networking.FetchS2C> pendingRequest;
-  private boolean showImmutable = false;
 
   public GameRuleListWidget(
       MinecraftClient client,
       ThreeSectionLayoutWidget layout,
-      Consumer<List<RuleInfo>> onRulesResponse,
       BiConsumer<Boolean, Boolean> onRuleChange
   ) {
     super(client, layout);
-    this.onRulesResponse = onRulesResponse;
     this.onRuleChange = onRuleChange;
 
     this.setContentPaddingY(GuiUtil.PADDING / 2);
-  }
-
-  public void setShowImmutable(boolean showImmutable) {
-    this.showImmutable = showImmutable;
-    this.fetch();
-  }
-
-  public boolean isShowingImmutable() {
-    return this.showImmutable;
   }
 
   public void fetch() {
@@ -81,7 +66,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.addEntry(LoadingEntry.factory(this.client.textRenderer));
     this.refreshPositions();
 
-    ServerRequest<Networking.FetchS2C> pendingRequest = ClientNetworking.sendFetch(showImmutable);
+    ServerRequest<Networking.FetchS2C> pendingRequest = ClientNetworking.sendFetch();
 
     pendingRequest.getFuture().orTimeout(30, TimeUnit.SECONDS).whenCompleteAsync(
         (payload, throwable) -> {
@@ -89,8 +74,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
             this.setError();
           } else {
             try {
-              this.setRules(payload.rules(), payload.activeVariant(), showImmutable);
-              this.onRulesResponse.accept(payload.rules());
+              this.setRules(payload.rules());
             } catch (Exception e) {
               GameRulesMod.LOGGER.error("Exception thrown while populating rules list!", e);
               this.setError();
@@ -114,7 +98,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
   }
 
 
-  private void setRules(final List<RuleInfo> rules, final Variant serverActiveVariant, final boolean showImmutable) {
+  private void setRules(final List<RuleInfo> rules) {
     this.clearEntries();
 
     final TextRenderer textRenderer = this.client.textRenderer;
@@ -132,14 +116,15 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     final HashMap<GameRuleCategory, HashMap<GameRule<?>, FlowListWidget.EntryFactory<? extends RuleEntry>>> ruleEntries = new HashMap<>();
 
     gameRules.streamRules().filter(RuleHelper::isSupported).forEach((rule) -> {
-      RuleState state = stateMap.getOrDefault(RuleHelper.idOf(rule), RuleState.IMMUTABLE);
-      if (!showImmutable && state.equals(RuleState.IMMUTABLE)) {
+      RuleState state = stateMap.get(RuleHelper.idOf(rule));
+      if (state == null) {
+        // Server didn't report this rule (e.g. feature-set mismatch); skip it.
         return;
       }
       Date changed = changedMap.get(RuleHelper.idOf(rule));
       FlowListWidget.EntryFactory<? extends RuleEntry> factory = RuleHelper.isBoolean(rule)
-          ? BooleanRuleEntry.factory(serverActiveVariant, gameRules, rule, state, changed, this::onRuleChange, textRenderer)
-          : IntRuleEntry.factory(serverActiveVariant, gameRules, rule, state, changed, this::onRuleChange, textRenderer);
+          ? BooleanRuleEntry.factory(gameRules, rule, state, changed, this::onRuleChange, textRenderer)
+          : IntRuleEntry.factory(gameRules, rule, state, changed, this::onRuleChange, textRenderer);
       ruleEntries.computeIfAbsent(rule.getCategory(), (category) -> new HashMap<>()).put(rule, factory);
     });
 
@@ -220,7 +205,6 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static RuleContext of(
-        Variant serverActiveVariant,
         GameRules gameRules,
         GameRule<?> rule,
         RuleState state,
@@ -233,7 +217,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       return new RuleContext(
           id,
           getDisplayName(rule),
-          getTooltip(serverActiveVariant, rule, value, state, changed),
+          getTooltip(rule, value, state, changed),
           getNarrationName(rule),
           value,
           state,
@@ -300,7 +284,6 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     private static List<Text> getTooltip(
-        Variant serverActiveVariant,
         GameRule<?> rule,
         Either<Boolean, Integer> currentValue,
         RuleState state,
@@ -313,7 +296,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       lines.add(getDefaultValueLine(rule));
       lines.add(getCurrentValueLine(rule, currentValue));
       lines.add(getChangedLine(changed));
-      getDisabledLine(state, serverActiveVariant).ifPresent(lines::add);
+      getDisabledLine(state).ifPresent(lines::add);
 
       return lines;
     }
@@ -361,10 +344,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT));
     }
 
-    private static Optional<Text> getDisabledLine(RuleState state, Variant serverActiveVariant) {
+    private static Optional<Text> getDisabledLine(RuleState state) {
       return Optional.ofNullable(switch (state) {
-            case IMMUTABLE ->
-                Text.translatable("gamerulesmod.main.immutable.variant", formatActiveVariant(serverActiveVariant));
             case LOCKED -> Text.translatable(
                 "gamerulesmod.main.immutable.locked",
                 Text.translatable("selectWorld.gameMode.hardcore").formatted(Formatting.RED)
@@ -375,18 +356,6 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .map((text) -> Text.literal("\n")
               .formatted(Formatting.GRAY, Formatting.ITALIC)
               .append(Text.translatable("gamerulesmod.main.immutable", text)));
-    }
-
-    private static Text formatActiveVariant(Variant variant) {
-      return Text.literal(variant.name()).formatted(getVariantColor(variant));
-    }
-
-    private static Formatting getVariantColor(Variant variant) {
-      return switch (variant) {
-        case BASE -> Formatting.WHITE;
-        case TECHNICAL -> Formatting.GOLD;
-        case HARDCORE -> Formatting.RED;
-      };
     }
 
     private static String getNarrationName(GameRule<?> rule) {
@@ -751,7 +720,6 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static FlowListWidget.EntryFactory<BooleanRuleEntry> factory(
-        Variant serverActiveVariant,
         GameRules gameRules,
         GameRule<?> rule,
         RuleState state,
@@ -760,7 +728,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new BooleanRuleEntry(
-          RuleContext.of(serverActiveVariant, gameRules, rule, state, changed, onChange),
+          RuleContext.of(gameRules, rule, state, changed, onChange),
           textRenderer,
           index,
           left,
@@ -812,7 +780,6 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     }
 
     public static FlowListWidget.EntryFactory<IntRuleEntry> factory(
-        Variant serverActiveVariant,
         GameRules gameRules,
         GameRule<?> rule,
         RuleState state,
@@ -821,7 +788,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         TextRenderer textRenderer
     ) {
       return (index, left, top, width) -> new IntRuleEntry(
-          RuleContext.of(serverActiveVariant, gameRules, rule, state, changed, onChange),
+          RuleContext.of(gameRules, rule, state, changed, onChange),
           textRenderer,
           index,
           left,
