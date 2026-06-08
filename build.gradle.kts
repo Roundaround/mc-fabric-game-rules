@@ -1,13 +1,26 @@
-import me.roundaround.gradle.extension.library.LibModule
-
 plugins {
-  id("roundalib-gradle") version "1.1.0"
+  id("me.roundaround.allay")
 }
 
-roundalib {
-  library {
-    local = true
-    version = "3.4.1"
-    modules.addAll(LibModule.CORE, LibModule.GUI, LibModule.NETWORK)
+allay {
+  displayName.set("Game Rules")
+  description.set("Modify game rules in your existing worlds.")
+  authors.set(listOf("Roundaround"))
+  license.set("MIT")
+  homepage.set("https://modrinth.com/mod/game-rules")
+  repository.set("https://github.com/Roundaround/mc-fabric-game-rules")
+  issues.set("https://github.com/Roundaround/mc-fabric-game-rules/issues")
+
+  modrinth {
+    projectId.set("game-rules")
+  }
+
+  curseforge {
+    projectId.set(1292156)
+  }
+
+  release {
+    versionType.set("release")
+    sourcesJar.set(true)
   }
 }
