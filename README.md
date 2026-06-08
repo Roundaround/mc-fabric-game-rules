@@ -1,7 +1,7 @@
 ![Game Rules](https://imgur.com/yaCr6O5.png)
 
-![](https://img.shields.io/badge/Loader-Fabric-313e51?style=for-the-badge)
-![](https://img.shields.io/badge/MC-1.21--1.21.11-313e51?style=for-the-badge)
+![](https://img.shields.io/badge/Loader-Fabric%20|%20Forge%20|%20NeoForge-313e51?style=for-the-badge)
+![](https://img.shields.io/badge/MC-26.1%20|%201.21--1.21.11-313e51?style=for-the-badge)
 ![](https://img.shields.io/badge/Side-Client%20&%20Server-313e51?style=for-the-badge)
 
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/game-rules?style=flat&logo=modrinth&color=00AF5C)](https://modrinth.com/mod/game-rules)
