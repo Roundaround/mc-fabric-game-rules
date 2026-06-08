@@ -43,9 +43,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleListWidget.Entry> implements AutoCloseable {
+  private static final Component EMPTY_TEXT =
+      Component.translatable("gamerulesmod.main.none").withStyle(ChatFormatting.ITALIC);
+  private static final Component NO_RESULTS_TEXT =
+      Component.translatable("gamerulesmod.main.noResults").withStyle(ChatFormatting.ITALIC);
+
   private final BiConsumer<Boolean, Boolean> onRuleChange;
+  private final List<Section> sections = new ArrayList<>();
 
   private ServerRequest<Networking.FetchS2C> pendingRequest;
+  private String filter = "";
+  private boolean rulesLoaded = false;
 
   public GameRuleListWidget(
       Minecraft client,
@@ -60,6 +68,9 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
   public void fetch() {
     this.cancel();
+
+    this.rulesLoaded = false;
+    this.sections.clear();
 
     this.clearEntries();
     this.addEntry(LoadingEntry.factory(this.client.font));
@@ -99,6 +110,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
   private void setRules(final List<RuleInfo> rules) {
     this.clearEntries();
+    this.sections.clear();
+    this.rulesLoaded = false;
 
     final Font textRenderer = this.client.font;
 
@@ -127,34 +140,86 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       ruleEntries.computeIfAbsent(rule.category(), (category) -> new HashMap<>()).put(rule, factory);
     });
 
-    if (ruleEntries.isEmpty()) {
-      this.addEntry(EmptyEntry.factory(textRenderer));
+    // Build every entry up front and keep them grouped into sections so filtering can show/hide
+    // entries without rebuilding them (which would discard in-progress, unsaved edits).
+    ruleEntries.entrySet().stream()
+        .sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRuleCategory::id)))
+        .forEach((categoryEntry) -> {
+          CategoryEntry header = this.addEntry(CategoryEntry.factory(categoryEntry.getKey().label(), textRenderer));
+          ArrayList<RuleEntry> sectionRules = new ArrayList<>();
+          categoryEntry.getValue().entrySet().stream()
+              .sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRule::getIdentifier)))
+              .forEach((ruleEntry) -> sectionRules.add(this.addEntry(ruleEntry.getValue())));
+          this.sections.add(new Section(header, sectionRules));
+        });
+
+    this.rulesLoaded = true;
+    this.onRuleChange();
+    this.applyFilter(this.filter);
+  }
+
+  public void applyFilter(String filter) {
+    this.filter = filter == null ? "" : filter;
+    if (this.rulesLoaded) {
+      this.rebuildVisible();
+    }
+  }
+
+  private void rebuildVisible() {
+    this.clearEntries();
+
+    if (this.sections.isEmpty()) {
+      this.addEntry(EmptyEntry.factory(EMPTY_TEXT, this.client.font));
+      this.arrangeElements();
+      return;
     }
 
-    ruleEntries.entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRuleCategory::id))).forEach((categoryEntry) -> {
-      this.addEntry(CategoryEntry.factory(categoryEntry.getKey().label(), textRenderer));
-      categoryEntry.getValue().entrySet().stream()
-          .sorted(Map.Entry.comparingByKey(Comparator.comparing(GameRule::getIdentifier)))
-          .forEach((ruleEntry) -> this.addEntry(ruleEntry.getValue()));
-    });
+    final String query = this.filter.trim().toLowerCase(Locale.ROOT);
 
-    this.onRuleChange();
+    final ArrayList<Entry> visible = new ArrayList<>();
+    for (Section section : this.sections) {
+      List<RuleEntry> matched = query.isEmpty()
+          ? section.rules()
+          : section.rules().stream().filter((rule) -> rule.matchesFilter(query)).toList();
+      if (!matched.isEmpty()) {
+        visible.add(section.header());
+        visible.addAll(matched);
+      }
+    }
+
+    if (visible.isEmpty()) {
+      this.addEntry(EmptyEntry.factory(NO_RESULTS_TEXT, this.client.font));
+    } else {
+      this.entries.addAll(visible);
+    }
+
+    this.calculateContentHeight();
     this.arrangeElements();
   }
 
   private void onRuleChange() {
-    boolean allValid = this.entries.stream()
-        .allMatch((entry) -> !(entry instanceof RuleEntry ruleEntry) || ruleEntry.isValid());
-    boolean anyDirty = this.entries.stream()
-        .anyMatch((entry) -> entry instanceof RuleEntry ruleEntry && ruleEntry.isDirty());
+    // Evaluate every rule (across all sections), not just the ones currently visible under the
+    // active search filter, so edits to a filtered-out rule still count toward validity/dirtiness.
+    boolean allValid = true;
+    boolean anyDirty = false;
+    for (Section section : this.sections) {
+      for (RuleEntry ruleEntry : section.rules()) {
+        if (!ruleEntry.isValid()) {
+          allValid = false;
+        }
+        if (ruleEntry.isDirty()) {
+          anyDirty = true;
+        }
+      }
+    }
 
     this.onRuleChange.accept(allValid, anyDirty);
   }
 
   public LinkedHashMap<String, Either<Boolean, Integer>> getDirtyValues() {
     LinkedHashMap<String, Either<Boolean, Integer>> values = new LinkedHashMap<>();
-    for (Entry entry : this.entries) {
-      if (entry instanceof RuleEntry ruleEntry) {
+    for (Section section : this.sections) {
+      for (RuleEntry ruleEntry : section.rules()) {
         if (!ruleEntry.isValid()) {
           return new LinkedHashMap<>();
         }
@@ -171,11 +236,15 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
     this.cancel();
   }
 
+  private record Section(CategoryEntry header, List<RuleEntry> rules) {
+  }
+
   public static class RuleContext {
     private final String id;
     private final Component name;
     private final List<Component> tooltip;
     private final String narrationName;
+    private final String searchText;
     private final Either<Boolean, Integer> initialValue;
     private final RuleState state;
     private final Runnable onChange;
@@ -188,6 +257,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
         Component name,
         List<Component> tooltip,
         String narrationName,
+        String searchText,
         Either<Boolean, Integer> initialValue,
         RuleState state,
         Runnable onChange
@@ -196,6 +266,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       this.name = name;
       this.tooltip = tooltip;
       this.narrationName = narrationName;
+      this.searchText = searchText;
       this.initialValue = initialValue;
       this.state = state;
       this.onChange = onChange;
@@ -218,6 +289,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           getDisplayName(rule),
           getTooltip(rule, value, state, changed),
           getNarrationName(rule),
+          buildSearchText(rule, id),
           value,
           state,
           onChange
@@ -238,6 +310,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     public String getNarrationName() {
       return this.narrationName;
+    }
+
+    public boolean matchesFilter(String lowerCaseQuery) {
+      return this.searchText.contains(lowerCaseQuery);
     }
 
     public Either<Boolean, Integer> getValue() {
@@ -280,6 +356,17 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     private static Component getDisplayName(GameRule<?> rule) {
       return Component.translatable(rule.getDescriptionId());
+    }
+
+    // Mirrors vanilla's search: rule id, readable name, category label, and description are all
+    // searchable via a case-insensitive substring match (see AbstractGameRulesScreen.RuleList).
+    private static String buildSearchText(GameRule<?> rule, String id) {
+      StringBuilder builder = new StringBuilder();
+      builder.append(id).append(' ');
+      builder.append(getDisplayName(rule).getString()).append(' ');
+      builder.append(rule.category().label().getString());
+      getDescription(rule).ifPresent((description) -> builder.append(' ').append(description.getString()));
+      return builder.toString().toLowerCase(Locale.ROOT);
     }
 
     private static List<Component> getTooltip(
@@ -490,9 +577,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
   }
 
   public static class EmptyEntry extends Entry {
-    private static final Component TEXT = Component.translatable("gamerulesmod.main.none").withStyle(ChatFormatting.ITALIC);
-
-    public EmptyEntry(Font textRenderer, int index, int left, int top, int width) {
+    public EmptyEntry(Component text, Font textRenderer, int index, int left, int top, int width) {
       super(textRenderer, index, left, top, width, 36);
 
       LinearLayoutWidget layout = LinearLayoutWidget.vertical(
@@ -504,7 +589,7 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
           .mainAxisContentAlignCenter()
           .defaultOffAxisContentAlignCenter();
 
-      layout.add(LabelWidget.builder(textRenderer, TEXT)
+      layout.add(LabelWidget.builder(textRenderer, text)
           .alignTextCenterX()
           .alignTextCenterY()
           .overflowBehavior(LabelWidget.OverflowBehavior.SCROLL)
@@ -529,8 +614,8 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
       });
     }
 
-    public static FlowListWidget.EntryFactory<EmptyEntry> factory(Font textRenderer) {
-      return (index, left, top, width) -> new EmptyEntry(textRenderer, index, left, top, width);
+    public static FlowListWidget.EntryFactory<EmptyEntry> factory(Component text, Font textRenderer) {
+      return (index, left, top, width) -> new EmptyEntry(text, textRenderer, index, left, top, width);
     }
   }
 
@@ -612,6 +697,10 @@ public class GameRuleListWidget extends ParentElementEntryListWidget<GameRuleLis
 
     public boolean isValid() {
       return this.context.isValid();
+    }
+
+    public boolean matchesFilter(String lowerCaseQuery) {
+      return this.context.matchesFilter(lowerCaseQuery);
     }
 
     public String getId() {

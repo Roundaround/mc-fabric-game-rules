@@ -8,6 +8,7 @@ import me.roundaround.trove.client.gui.util.GuiUtil;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -25,6 +26,7 @@ public class GameRuleScreen extends Screen {
   private final Screen parent;
 
   private GameRuleListWidget list;
+  private EditBox searchBox;
   private Button saveButton;
 
   public GameRuleScreen(Screen parent) {
@@ -46,6 +48,16 @@ public class GameRuleScreen extends Screen {
     this.layout.setHeaderHeight(48);
     this.layout.getHeader().spacing(GuiUtil.PADDING);
     this.layout.addHeader(this.font, this.title);
+
+    Component searchHint = Component.translatable("gui.game_rule.search");
+    this.searchBox = new EditBox(this.font, 200, 20, searchHint);
+    this.searchBox.setHint(searchHint.copy().withStyle(EditBox.SEARCH_HINT_STYLE));
+    this.searchBox.setResponder((value) -> {
+      if (this.list != null) {
+        this.list.applyFilter(value);
+      }
+    });
+    this.layout.addHeader(this.searchBox);
 
     this.saveButton = this.layout.addFooter(Button.builder(
         CommonComponents.GUI_DONE, (button) -> {
@@ -76,6 +88,13 @@ public class GameRuleScreen extends Screen {
   @Override
   protected void repositionElements() {
     this.layout.arrangeElements();
+  }
+
+  @Override
+  protected void setInitialFocus() {
+    if (this.searchBox != null) {
+      this.setInitialFocus(this.searchBox);
+    }
   }
 
   @Override

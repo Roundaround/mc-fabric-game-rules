@@ -4,6 +4,7 @@
   "gamerulesmod.main.error1": "Failed to load game rules.",
   "gamerulesmod.main.error2": "Check the logs for details.",
   "gamerulesmod.main.none": "Nothing to show",
+  "gamerulesmod.main.noResults": "No matching game rules",
   "gamerulesmod.main.current": "Current: %s",
   "gamerulesmod.main.date": "Changed: %s",
   "gamerulesmod.main.never": "(never)",
