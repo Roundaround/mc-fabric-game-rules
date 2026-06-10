@@ -6,7 +6,7 @@
 
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/game-rules?style=flat&logo=modrinth&color=00AF5C)](https://modrinth.com/mod/game-rules)
 [![CurseForge Downloads](https://img.shields.io/curseforge/dt/1292156?style=flat&logo=curseforge&color=F16436)](https://www.curseforge.com/minecraft/mc-mods/game-rules)
-[![GitHub Repo stars](https://img.shields.io/github/stars/Roundaround/mc-fabric-game-rules?style=flat&logo=github)](https://github.com/Roundaround/mc-fabric-game-rules)
+[![GitHub Repo stars](https://img.shields.io/github/stars/Roundaround/mc-game-rules?style=flat&logo=github)](https://github.com/Roundaround/mc-game-rules)
 
 [![Support me on Ko-fi](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/compact/donate/kofi-singular-alt_vector.svg)](https://ko-fi.com/roundaround)
 

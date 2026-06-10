@@ -8,8 +8,8 @@ allay {
   authors.set(listOf("Roundaround"))
   license.set("MIT")
   homepage.set("https://modrinth.com/mod/game-rules")
-  repository.set("https://github.com/Roundaround/mc-fabric-game-rules")
-  issues.set("https://github.com/Roundaround/mc-fabric-game-rules/issues")
+  repository.set("https://github.com/Roundaround/mc-game-rules")
+  issues.set("https://github.com/Roundaround/mc-game-rules/issues")
 
   modrinth {
     projectId.set("game-rules")
